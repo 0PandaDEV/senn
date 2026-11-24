@@ -97,7 +97,7 @@ pub async fn agents(cx: &Cx) -> Result<impl View> {
                         <h2>"Add agent"</h2>
                         <label class="field">
                             <span>"Name"</span>
-                            <input name="name" placeholder="panda-02" required=(true)>
+                            <input name="name" placeholder="my-server" required=(true)>
                         </label>
                         <div class="dialog-actions">
                             <button type="button" class="button" data-close="">"Cancel"</button>
