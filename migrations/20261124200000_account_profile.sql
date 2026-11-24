@@ -1,0 +1,4 @@
+ALTER TABLE account ADD COLUMN display_name TEXT;
+ALTER TABLE account ADD COLUMN avatar BLOB;
+ALTER TABLE account ADD COLUMN avatar_type TEXT;
+ALTER TABLE account ADD COLUMN avatar_version INTEGER NOT NULL DEFAULT 0;
