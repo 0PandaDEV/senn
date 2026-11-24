@@ -260,12 +260,7 @@ async fn schedule(ctx: Arc<Ctx>, out: mpsc::UnboundedSender<FromAgent>) {
             if let Err(e) = handlers::check_updates(&ctx, |_| {}).await {
                 tracing::warn!("update check failed: {e}");
             } else {
-                let _ = out.send(FromAgent::Event {
-                    kind: "updates".into(),
-                    data: serde_json::Value::Null,
-                });
                 handlers::auto_update(&ctx, &out).await;
-                let _ = handlers::check_updates(&ctx, |_| {}).await;
                 let _ = out.send(FromAgent::Event {
                     kind: "updates".into(),
                     data: serde_json::Value::Null,

@@ -101,7 +101,22 @@ pub async fn state(ctx: &Ctx) -> Result<HostState, String> {
         }
     }
     let samples = ctx.samples.read().expect("samples lock").clone();
-    let containers = docker::containers(&ctx.docker, &dirs, &samples).await?;
+    let mut containers = docker::containers(&ctx.docker, &dirs, &samples).await?;
+    let cfg = ctx.config();
+    let fallback = cfg.policy_default();
+    for c in &mut containers {
+        let overridden = c.stack.as_deref().and_then(|stack| {
+            c.service
+                .as_deref()
+                .and_then(|s| cfg.policies.get(&format!("{stack}/{s}")))
+                .or_else(|| cfg.policies.get(stack))
+        });
+        c.update_policy = match overridden {
+            Some(p) => p.clone(),
+            None if c.update_policy.is_empty() => fallback.to_string(),
+            None => c.update_policy.clone(),
+        };
+    }
     let (updates, updates_checked_at) = ctx.updates.snapshot();
     Ok(HostState {
         stacks,
@@ -158,9 +173,13 @@ pub async fn run_stack(
 
 pub async fn check_updates(ctx: &Ctx, progress: impl FnMut(String)) -> Result<(), String> {
     let st = state(ctx).await?;
-    ctx.updates
-        .check(&ctx.docker, &st.containers, progress)
-        .await;
+    let watched: Vec<_> = st
+        .containers
+        .iter()
+        .filter(|c| c.update_policy != "off")
+        .cloned()
+        .collect();
+    ctx.updates.check(&ctx.docker, &watched, progress).await;
     Ok(())
 }
 
@@ -175,7 +194,7 @@ pub async fn update_all(ctx: &Ctx, mut line: impl FnMut(String)) -> Result<(), S
     let mut targets: Vec<(String, String)> = st
         .containers
         .iter()
-        .filter(|c| behind.contains(c.image.as_str()))
+        .filter(|c| c.update_policy != "off" && behind.contains(c.image.as_str()))
         .filter_map(|c| Some((c.stack.clone()?, c.service.clone()?)))
         .collect();
     targets.sort();
@@ -201,10 +220,6 @@ pub async fn update_all(ctx: &Ctx, mut line: impl FnMut(String)) -> Result<(), S
 }
 
 pub async fn auto_update(ctx: &Ctx, out: &UnboundedSender<FromAgent>) {
-    let cfg = ctx.config();
-    if !cfg.auto_update {
-        return;
-    }
     let Ok(st) = state(ctx).await else { return };
     let behind: HashSet<&str> = st
         .updates

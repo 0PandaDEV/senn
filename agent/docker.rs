@@ -279,7 +279,7 @@ pub async fn containers(
                     .get("senn.update")
                     .map(|v| v.to_lowercase())
                     .filter(|v| matches!(v.as_str(), "auto" | "notify" | "off"))
-                    .unwrap_or_else(|| "notify".into()),
+                    .unwrap_or_default(),
             }
         })
         .collect();
