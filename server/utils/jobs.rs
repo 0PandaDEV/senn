@@ -26,6 +26,37 @@ struct Job {
     error: Option<String>,
     started: i64,
     lines: Vec<String>,
+    dismissed: bool,
+}
+
+#[derive(Clone)]
+pub struct JobView {
+    pub id: u64,
+    pub title: String,
+    pub key: String,
+    pub state: &'static str,
+    pub text: String,
+}
+
+const SHOWN_JOBS: usize = 8;
+const SHOWN_LINES: usize = 300;
+
+fn strip_ansi(text: &str) -> String {
+    let mut out = String::with_capacity(text.len());
+    let mut chars = text.chars().peekable();
+    while let Some(c) = chars.next() {
+        if c == '\x1b' && chars.peek() == Some(&'[') {
+            chars.next();
+            for n in chars.by_ref() {
+                if n.is_ascii_alphabetic() {
+                    break;
+                }
+            }
+        } else {
+            out.push(c);
+        }
+    }
+    out
 }
 
 static JOBS: LazyLock<Mutex<VecDeque<Job>>> = LazyLock::new(Default::default);
@@ -61,6 +92,7 @@ pub fn start(title: String, key: String, mut handle: StreamHandle) -> u64 {
         error: None,
         started: state::now(),
         lines: Vec::new(),
+        dismissed: false,
     };
     {
         let mut jobs = JOBS.lock().expect("jobs lock");
@@ -103,10 +135,52 @@ pub fn start(title: String, key: String, mut handle: StreamHandle) -> u64 {
     id
 }
 
+pub fn dismiss(id: u64) -> bool {
+    let mut found = false;
+    update(id, |j| {
+        j.dismissed = true;
+        found = true;
+    });
+    if found {
+        emit(json!({ "t": "job", "ev": "dismiss", "id": id }));
+    }
+    found
+}
+
+pub fn visible() -> Vec<JobView> {
+    let jobs = JOBS.lock().expect("jobs lock");
+    let mut shown: Vec<JobView> = jobs
+        .iter()
+        .filter(|j| !j.dismissed)
+        .map(|j| {
+            let skip = j.lines.len().saturating_sub(SHOWN_LINES);
+            let mut text = String::new();
+            for line in &j.lines[skip..] {
+                text.push_str(&strip_ansi(line));
+                text.push('\n');
+            }
+            if let Some(e) = &j.error {
+                text.push_str(&format!("error: {e}\n"));
+            }
+            JobView {
+                id: j.id,
+                title: j.title.clone(),
+                key: j.key.clone(),
+                state: j.state,
+                text,
+            }
+        })
+        .collect();
+    let extra = shown.len().saturating_sub(SHOWN_JOBS);
+    shown.drain(..extra);
+    shown
+}
+
 pub fn snapshot() -> Vec<Value> {
     JOBS.lock()
         .expect("jobs lock")
         .iter()
+        .filter(|j| !j.dismissed)
         .map(|j| {
             json!({
                 "id": j.id,

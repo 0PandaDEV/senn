@@ -3,6 +3,7 @@
   grid-template-columns: 240px minmax(0, 1fr);
   gap: var(--space-8);
   padding: var(--space-8);
+  padding-bottom: calc(var(--space-16) + var(--jobs-h, 0px));
   min-height: 100vh;
 
   @media (max-width: 860px) {
@@ -623,78 +624,172 @@
   right: var(--space-8);
   bottom: var(--space-8);
   z-index: 50;
+  display: flex;
+  flex-direction: column;
+  height: var(--jobs-h);
   background: var(--background);
   border: 1px solid var(--border-hover);
   border-radius: calc(6px * var(--k));
   box-shadow: 0 8px 32px #0008;
   overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  max-height: 42vh;
 
   @media (max-width: 860px) {
     left: var(--space-8);
   }
 
+  &[hidden] {
+    display: none;
+  }
+
   .jobs-bar {
-    display: grid;
-    grid-template-columns: minmax(0, max-content) auto 1fr auto;
+    display: flex;
     align-items: center;
     gap: var(--space-8);
-    padding: var(--space-8) var(--space-8) var(--space-8) var(--space-16);
+    flex: none;
+    height: var(--jobs-bar-h);
+    padding: 0 var(--space-8);
     border-bottom: 1px solid var(--border);
     background: var(--element);
 
-    .jobs-title {
-      font-weight: 600;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .jobs-state {
-      font-size: 0.75rem;
-      padding: 0 var(--space-8);
-      border-radius: calc(6px * var(--k));
-      background: var(--element-hover);
-
-      &[data-tone="ok"] {
-        color: var(--ok);
-      }
-
-      &[data-tone="warn"] {
-        color: var(--warn);
-
-        &::before {
-          content: "";
-          display: inline-block;
-          width: 8px;
-          height: 8px;
-          margin-right: var(--space-4);
-          border: 1.5px solid color-mix(in srgb, currentColor 30%, transparent);
-          border-top-color: currentColor;
-          border-radius: 50%;
-          animation: spin 0.7s linear infinite;
-        }
-      }
-
-      &[data-tone="bad"] {
-        color: var(--bad);
-      }
-    }
-
     .icon-button {
-      grid-column: 4;
+      flex: none;
+
+      .icon {
+        transform: rotate(90deg);
+        transition: transform 0.15s;
+      }
     }
   }
 
+  &[data-collapsed] {
+    .jobs-bar {
+      border-bottom: 0;
+
+      .icon-button .icon {
+        transform: rotate(-90deg);
+      }
+    }
+
+    .jobs-panes {
+      display: none;
+    }
+  }
+
+  .jobs-tabs {
+    display: flex;
+    flex: 1;
+    gap: var(--space-4);
+    min-width: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .jobs-tab {
+    display: flex;
+    flex: none;
+    align-items: center;
+    max-width: 260px;
+    border-radius: calc(6px * var(--k));
+    color: var(--text-muted);
+    transition: var(--hover-transition);
+
+    &:hover {
+      background: var(--element-hover);
+      color: var(--text);
+    }
+
+    &[data-active] {
+      background: var(--active-bg);
+      box-shadow: var(--active-shadow);
+      color: var(--text);
+    }
+
+    button {
+      border: 0;
+      background: none;
+      color: inherit;
+      font: inherit;
+      cursor: pointer;
+    }
+
+    .jobs-tab-main {
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+      min-width: 0;
+      min-height: calc(var(--control-h) - var(--space-4));
+      padding: 0 var(--space-4) 0 var(--space-12);
+    }
+
+    .jobs-tab-title {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .jobs-tab-x {
+      display: grid;
+      place-items: center;
+      flex: none;
+      width: 24px;
+      height: 24px;
+      margin-right: var(--space-4);
+      border-radius: calc(6px * var(--k));
+      color: var(--text-muted);
+
+      &:hover {
+        background: var(--element-hover);
+        color: var(--text);
+      }
+    }
+  }
+
+  .jobs-dot {
+    flex: none;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    corner-shape: round;
+    background: var(--text-muted);
+  }
+
+  .jobs-tab[data-state="done"] .jobs-dot {
+    background: var(--ok);
+  }
+
+  .jobs-tab[data-state="failed"] .jobs-dot {
+    background: var(--bad);
+  }
+
+  .jobs-tab[data-state="running"] .jobs-dot {
+    box-sizing: border-box;
+    width: 12px;
+    height: 12px;
+    margin: -2px;
+    background: none;
+    border: 2px solid color-mix(in srgb, var(--warn) 30%, transparent);
+    border-top-color: var(--warn);
+    animation: spin 0.7s linear infinite;
+  }
+
+  .jobs-panes {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+  }
+
   .jobs-body {
+    flex: 1;
+    min-width: 0;
     overflow: auto;
     padding: var(--space-16);
-    min-height: 96px;
     color: var(--text-secondary);
     white-space: pre-wrap;
     word-break: break-word;
+
+    &[hidden] {
+      display: none;
+    }
   }
 }
 

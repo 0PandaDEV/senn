@@ -1,5 +1,9 @@
 const SELECTOR = ".logs, .files, .env-file, .log-picker";
-const BOTTOM = () => (matchMedia("(max-width: 860px)").matches ? 16 : 24);
+const jobs = () => {
+  const panel = document.getElementById("jobs");
+  return panel && !panel.hidden ? panel.offsetHeight + 8 : 0;
+};
+const BOTTOM = () => (matchMedia("(max-width: 860px)").matches ? 16 : 24) + jobs();
 
 let queued = false;
 
@@ -22,8 +26,8 @@ function fit() {
 }
 
 new MutationObserver((mutations) => {
-  if (mutations.some((m) => !(m.target as Element).closest?.(".logs-body"))) fit();
-}).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["hidden"] });
+  if (mutations.some((m) => !(m.target as Element).closest?.(".logs-body, .jobs-body"))) fit();
+}).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["hidden", "data-collapsed"] });
 const main = document.querySelector(".main");
 if (main) new ResizeObserver(fit).observe(main);
 window.addEventListener("resize", fit);

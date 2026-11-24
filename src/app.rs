@@ -12,7 +12,7 @@ use topcoat::{
     view::{View, view},
 };
 
-use crate::components::ui::icon::{Icon, icon, sprite};
+use crate::components::{jobs::jobs_panel, ui::icon::sprite};
 
 pub struct PageMeta {
     pub public: bool,
@@ -88,14 +88,7 @@ async fn root(cx: &Cx, slot: Slot<'_>) -> Result<impl View> {
                 sprite()
                 <div class="toasts" id="toasts"></div>
                 (slot)
-                <div class="jobs" id="jobs" hidden=(true)>
-                    <div class="jobs-bar">
-                        <span class="jobs-title" id="jobs-title">"Output"</span>
-                        <span class="jobs-state" id="jobs-state"></span>
-                        <button type="button" class="icon-button" id="jobs-close" aria-label="Close">icon(name: Icon::X)</button>
-                    </div>
-                    <pre class="jobs-body" id="jobs-body"></pre>
-                </div>
+                jobs_panel()
             </body>
         </html>
     })
