@@ -1244,10 +1244,12 @@ select[data-select]:not([data-enhanced]) {
   }
 
   .select-menu {
-    position: absolute;
-    top: calc(100% + var(--space-4));
-    left: 0;
+    position: fixed;
+    inset: auto;
+    margin: 0;
     z-index: 90;
+    color: var(--text);
+    overflow-x: hidden;
     display: grid;
     gap: 2px;
     min-width: 100%;
@@ -1263,11 +1265,6 @@ select[data-select]:not([data-enhanced]) {
     font-weight: 400;
     letter-spacing: normal;
     animation: in 0.12s ease-out;
-  }
-
-  &.right .select-menu {
-    left: auto;
-    right: 0;
   }
 
   .select-group {

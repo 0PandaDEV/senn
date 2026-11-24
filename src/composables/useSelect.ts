@@ -65,6 +65,8 @@ function enhance(select: HTMLSelectElement) {
   };
 
   const close = () => {
+    window.removeEventListener("scroll", onScroll, true);
+    window.removeEventListener("resize", close);
     menu?.remove();
     menu = null;
     wrap.classList.remove("open");
@@ -84,6 +86,29 @@ function enhance(select: HTMLSelectElement) {
   const option = (o: HTMLOptionElement) =>
     `<div class="select-option" role="option" data-value="${escapeHtml(o.value)}" aria-selected="${o.selected}">${escapeHtml(o.textContent ?? "")}</div>`;
 
+  const place = () => {
+    if (!menu) return;
+    const rect = button.getBoundingClientRect();
+    const gap = 4;
+    menu.style.minWidth = `${rect.width}px`;
+    const height = menu.offsetHeight;
+    const below = window.innerHeight - rect.bottom - gap;
+    const top = below >= height || below >= rect.top - gap ? rect.bottom + gap : rect.top - gap - height;
+    menu.style.top = `${Math.max(gap, top)}px`;
+    if (wrap.classList.contains("right")) {
+      menu.style.left = "auto";
+      menu.style.right = `${Math.max(gap, window.innerWidth - rect.right)}px`;
+    } else {
+      const width = menu.offsetWidth;
+      menu.style.left = `${Math.max(gap, Math.min(rect.left, window.innerWidth - width - gap))}px`;
+    }
+  };
+
+  const onScroll = (event: Event) => {
+    if (menu && event.target instanceof Node && menu.contains(event.target)) return;
+    close();
+  };
+
   const open = () => {
     closeOpen?.();
     let html = "";
@@ -98,11 +123,16 @@ function enhance(select: HTMLSelectElement) {
     menu = document.createElement("div");
     menu.className = "select-menu";
     menu.setAttribute("role", "listbox");
+    menu.setAttribute("popover", "manual");
     menu.innerHTML = html;
     wrap.appendChild(menu);
+    menu.showPopover();
+    place();
     wrap.classList.add("open");
     button.setAttribute("aria-expanded", "true");
     closeOpen = close;
+    window.addEventListener("scroll", onScroll, true);
+    window.addEventListener("resize", close);
     const list = items();
     highlight(Math.max(0, list.findIndex((el) => el.getAttribute("aria-selected") === "true")));
     menu.addEventListener("mousedown", (event) => event.preventDefault());
