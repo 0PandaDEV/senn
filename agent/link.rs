@@ -136,7 +136,10 @@ async fn session(local: &Local, ctx: Arc<Ctx>) -> Result<(), String> {
                     let detach = !matches!(op, crate::proto::Op::Logs { .. });
                     running.insert(
                         id,
-                        (handlers::spawn_stream(ctx.clone(), id, op, out.clone()), detach),
+                        (
+                            handlers::spawn_stream(ctx.clone(), id, op, out.clone()),
+                            detach,
+                        ),
                     );
                 } else {
                     let ctx = ctx.clone();

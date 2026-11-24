@@ -281,11 +281,13 @@ pub async fn containers(
                         .as_deref()
                         .map(|d| d.trim_end_matches('/'))
                         .and_then(|d| d.rsplit('/').next());
-                    stack_dirs.values().find(|name| {
-                        base == Some(name.as_str())
-                            || project.as_deref() == Some(project_name(name).as_str())
-                    })
-                    .cloned()
+                    stack_dirs
+                        .values()
+                        .find(|name| {
+                            base == Some(name.as_str())
+                                || project.as_deref() == Some(project_name(name).as_str())
+                        })
+                        .cloned()
                 });
             let mut ports: Vec<PortInfo> = c
                 .ports
