@@ -129,6 +129,7 @@ function nearest(points: Point[], t: number): Point | null {
   return b && Math.abs(b[0] - t) < Math.abs(a[0] - t) ? b : a;
 }
 
+type Card = { el: HTMLElement; swatch: HTMLElement; label: HTMLElement; last: HTMLElement; cells: Text[]; line: Line };
 type Geo = { x0: number; x1: number; y0: number; y1: number; top: number; from: number; to: number; muted: string; text: string };
 
 export class Chart {
@@ -142,6 +143,15 @@ export class Chart {
   private noteEl: HTMLElement;
   private emptyEl: HTMLElement;
   private legend: HTMLElement;
+  private cards = new Map<string, Card>();
+  private resort = true;
+  private local = false;
+  private tipHead: HTMLElement | null = null;
+  private tipRows = new Map<string, { value: HTMLElement; band: HTMLElement | null }>();
+  private tipKey = "";
+  private tipW = 0;
+  private tipH = 0;
+  private tipSide: "r" | "l" = "r";
   private lines: Line[] = [];
   private span: Span = { from: 0, to: 1, step: 1 };
   private cursor: number | null = null;
@@ -195,10 +205,10 @@ export class Chart {
     return Math.max(0, this.plot.clientWidth - this.left - PAD.right);
   }
 
-  setLines(lines: Line[], span: Span) {
+  setLines(lines: Line[], span: Span, resort = true) {
     this.lines = lines;
     this.span = span;
-    this.renderLegend();
+    if (resort) this.resort = true;
     this.draw();
   }
 
@@ -218,53 +228,91 @@ export class Chart {
     this.emptyEl.textContent = text ?? "";
   }
 
-  setCursor(t: number | null) {
-    this.cursor = t;
+  setCursor(fraction: number | null) {
+    this.cursor = fraction;
     this.drawOverlay();
   }
 
   updateLegend() {
-    this.renderLegend();
+    this.resort = true;
+    this.draw();
   }
 
-  private renderLegend() {
-    this.legend.replaceChildren();
-    if (!this.lines.length) return;
-    const cards = this.lines.map((line) => ({ line, stats: this.stats(line) }));
-    cards.sort((a, b) => (b.stats[3] ?? -Infinity) - (a.stats[3] ?? -Infinity));
-    const show = (v: number | null) => (v === null ? "–" : formatValue(v, this.unit));
-    for (const { line, stats } of cards) {
-      const card = document.createElement("button");
-      card.type = "button";
-      card.className = "chart-card";
-      card.classList.toggle("off", !!line.hidden);
-      card.title = line.label;
-      const head = document.createElement("span");
-      head.className = "chart-card-head";
-      const swatch = document.createElement("i");
-      swatch.style.background = line.color;
-      const label = document.createElement("span");
-      label.textContent = line.label;
-      head.append(swatch, label);
-      const last = document.createElement("b");
-      last.textContent = show(stats[0]!);
-      const range = document.createElement("span");
-      range.className = "chart-card-range";
-      for (const [name, value] of [["Min", stats[1]], ["Avg", stats[2]], ["Max", stats[3]]] as [string, number | null][]) {
-        const cell = document.createElement("span");
-        const small = document.createElement("small");
-        small.textContent = name;
-        cell.append(small, show(value));
-        range.append(cell);
-      }
-      card.append(head, last, range);
-      card.addEventListener("click", () => {
-        line.hidden = !line.hidden;
-        this.renderLegend();
-        this.draw();
-      });
-      this.legend.append(card);
+  private renderLegend(resort: boolean) {
+    if (!this.lines.length) {
+      this.legend.replaceChildren();
+      this.cards.clear();
+      return;
     }
+    const live = new Set(this.lines.map((l) => l.id));
+    for (const [id, card] of this.cards) {
+      if (live.has(id)) continue;
+      card.el.remove();
+      this.cards.delete(id);
+    }
+    const show = (v: number | null) => (v === null ? "–" : formatValue(v, this.unit));
+    const entries: { card: Card; max: number }[] = [];
+    const fresh: HTMLElement[] = [];
+    for (const line of this.lines) {
+      let card = this.cards.get(line.id);
+      if (!card) {
+        card = this.createCard(line);
+        this.cards.set(line.id, card);
+        fresh.push(card.el);
+      }
+      card.line = line;
+      const stats = this.stats(line);
+      const text = (node: Text | HTMLElement, value: string) => {
+        if (node instanceof Text) {
+          if (node.data !== value) node.data = value;
+        } else if (node.textContent !== value) node.textContent = value;
+      };
+      card.el.classList.toggle("off", !!line.hidden);
+      if (card.el.title !== line.label) card.el.title = line.label;
+      if (card.swatch.style.background !== line.color) card.swatch.style.background = line.color;
+      text(card.label, line.label);
+      text(card.last, show(stats[0] ?? null));
+      [stats[1]!, stats[2]!, stats[3]!].forEach((v, i) => text(card.cells[i]!, show(v)));
+      entries.push({ card, max: stats[3] ?? -Infinity });
+    }
+    if (resort) {
+      entries.sort((a, b) => b.max - a.max);
+      this.legend.append(...entries.map((e) => e.card.el));
+    } else if (fresh.length) {
+      this.legend.append(...fresh);
+    }
+  }
+
+  private createCard(line: Line): Card {
+    const el = document.createElement("button");
+    el.type = "button";
+    el.className = "chart-card";
+    const head = document.createElement("span");
+    head.className = "chart-card-head";
+    const swatch = document.createElement("i");
+    const label = document.createElement("span");
+    head.append(swatch, label);
+    const last = document.createElement("b");
+    const range = document.createElement("span");
+    range.className = "chart-card-range";
+    const cells: Text[] = [];
+    for (const name of ["Min", "Avg", "Max"]) {
+      const cell = document.createElement("span");
+      const small = document.createElement("small");
+      small.textContent = name;
+      const value = document.createTextNode("");
+      cell.append(small, value);
+      range.append(cell);
+      cells.push(value);
+    }
+    el.append(head, last, range);
+    const card: Card = { el, swatch, label, last, cells, line };
+    el.addEventListener("click", () => {
+      card.line.hidden = !card.line.hidden;
+      this.renderLegend(false);
+      this.draw();
+    });
+    return card;
   }
 
   private stats(line: Line): (number | null)[] {
@@ -296,7 +344,8 @@ export class Chart {
       canvas.style.height = `${h}px`;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     }
-    this.draw();
+    this.paint();
+    this.paintOverlay();
   }
 
   private bind() {
@@ -304,7 +353,7 @@ export class Chart {
     const time = (event: PointerEvent): number => {
       const rect = canvas.getBoundingClientRect();
       const x = Math.min(Math.max(event.clientX - rect.left, this.left), this.left + this.width);
-      return this.span.from + ((x - this.left) / Math.max(1, this.width)) * (this.span.to - this.span.from);
+      return (x - this.left) / Math.max(1, this.width);
     };
     const localX = (event: PointerEvent): number => event.clientX - canvas.getBoundingClientRect().left;
     canvas.addEventListener("pointermove", (event) => {
@@ -314,12 +363,14 @@ export class Chart {
         this.drawOverlay();
         return;
       }
+      this.local = true;
       this.cursor = t;
       this.drawOverlay();
       this.onCursor(t);
     });
     canvas.addEventListener("pointerleave", () => {
       if (this.drag) return;
+      this.local = false;
       this.cursor = null;
       this.drawOverlay();
       this.onCursor(null);
@@ -355,13 +406,15 @@ export class Chart {
     this.queued = true;
     requestAnimationFrame(() => {
       this.queued = false;
+      this.renderLegend(this.resort);
+      this.resort = false;
       this.paint();
       this.paintOverlay();
     });
   }
 
   private drawOverlay() {
-    if (this.overlayQueued) return;
+    if (this.overlayQueued || this.queued) return;
     this.overlayQueued = true;
     requestAnimationFrame(() => {
       this.overlayQueued = false;
@@ -494,11 +547,12 @@ export class Chart {
       ctx.globalAlpha = 1;
     }
 
-    if (this.cursor === null || this.cursor < from || this.cursor > to) {
-      this.tip.hidden = true;
+    if (this.cursor === null) {
+      this.resetTip();
       return;
     }
-    const x = Math.round(X(this.cursor)) + 0.5;
+    const at = from + this.cursor * range;
+    const x = Math.round(X(at)) + 0.5;
     ctx.lineWidth = 1;
     ctx.strokeStyle = muted;
     ctx.setLineDash([3, 3]);
@@ -510,8 +564,8 @@ export class Chart {
     const rows: { line: Line; p: Point }[] = [];
     for (const line of this.lines) {
       if (line.hidden) continue;
-      const p = nearest(line.points, this.cursor);
-      if (p && Math.abs(p[0] - this.cursor) <= Math.max(this.span.step * 1.5, 3)) rows.push({ line, p });
+      const p = nearest(line.points, at);
+      if (p && Math.abs(p[0] - at) <= Math.max(this.span.step * 1.5, 3)) rows.push({ line, p });
     }
     for (const { line, p } of rows) {
       ctx.fillStyle = line.color;
@@ -519,41 +573,82 @@ export class Chart {
       ctx.arc(X(p[0]), Y(p[1]), 3, 0, Math.PI * 2);
       ctx.fill();
     }
-    this.showTip(x, this.cursor, rows);
+    if (this.local) this.showTip(x, at, rows);
+    else this.resetTip();
+  }
+
+  private resetTip() {
+    this.tipW = 0;
+    this.tipH = 0;
+    this.tipSide = "r";
+    this.tip.style.minWidth = "";
+    this.tip.style.minHeight = "";
+    this.tip.hidden = true;
   }
 
   private showTip(x: number, t: number, rows: { line: Line; p: Point }[]) {
-    if (!rows.length) {
-      this.tip.hidden = true;
+    const visible = this.lines.filter((l) => !l.hidden);
+    if (!visible.some((l) => l.points.length)) {
+      this.resetTip();
       return;
     }
-    const head = document.createElement("div");
-    head.className = "chart-tip-time";
-    head.textContent = formatTime(rows[0]!.p[0] || t);
-    const body: HTMLElement[] = [head];
-    const sorted = [...rows].sort((a, b) => b.p[1] - a.p[1] || a.line.label.localeCompare(b.line.label));
-    for (const { line, p } of sorted) {
-      const row = document.createElement("div");
-      row.className = "chart-tip-row";
-      const swatch = document.createElement("i");
-      swatch.style.background = line.color;
-      const label = document.createElement("span");
-      label.textContent = line.label;
-      const value = document.createElement("b");
-      value.textContent = formatValue(p[1], this.unit);
-      row.append(swatch, label, value);
-      if (this.span.step > 1 && p[3] > p[2]) {
-        const band = document.createElement("small");
-        band.textContent = `${formatValue(p[2], this.unit)} – ${formatValue(p[3], this.unit)}`;
-        row.append(band);
+    const banded = this.span.step > 1;
+    const key = `${banded}:${visible.map((l) => l.id).join("|")}`;
+    if (key !== this.tipKey || !this.tipHead) {
+      this.tipKey = key;
+      this.tipW = 0;
+      this.tipH = 0;
+      this.tip.style.minWidth = "";
+      this.tip.style.minHeight = "";
+      const head = document.createElement("div");
+      head.className = "chart-tip-time";
+      this.tipHead = head;
+      this.tipRows.clear();
+      const nodes: HTMLElement[] = [head];
+      for (const line of visible) {
+        const row = document.createElement("div");
+        row.className = "chart-tip-row";
+        const swatch = document.createElement("i");
+        swatch.style.background = line.color;
+        const label = document.createElement("span");
+        label.textContent = line.label;
+        const value = document.createElement("b");
+        row.append(swatch, label, value);
+        let band: HTMLElement | null = null;
+        if (banded) {
+          band = document.createElement("small");
+          row.append(band);
+        }
+        this.tipRows.set(line.id, { value, band });
+        nodes.push(row);
       }
-      body.push(row);
+      this.tip.replaceChildren(...nodes);
     }
-    this.tip.replaceChildren(...body);
+    const data = new Map(rows.map((r) => [r.line.id, r.p]));
+    this.tipHead.textContent = formatTime(rows[0]?.p[0] || t);
+    for (const line of visible) {
+      const cell = this.tipRows.get(line.id);
+      if (!cell) continue;
+      const p = data.get(line.id);
+      cell.value.textContent = p ? formatValue(p[1], this.unit) : "–";
+      if (cell.band) cell.band.textContent = p ? `${formatValue(p[2], this.unit)} – ${formatValue(p[3], this.unit)}` : "";
+    }
     this.tip.hidden = false;
     const width = this.tip.offsetWidth;
+    const height = this.tip.offsetHeight;
+    if (width > this.tipW) {
+      this.tipW = width;
+      this.tip.style.minWidth = `${width}px`;
+    }
+    if (height > this.tipH) {
+      this.tipH = height;
+      this.tip.style.minHeight = `${height}px`;
+    }
+    const w = Math.max(width, this.tipW);
     const plotWidth = this.plot.clientWidth;
-    this.tip.style.left = `${x + 14 + width > plotWidth ? Math.max(4, x - 14 - width) : x + 14}px`;
+    if (this.tipSide === "r" && x + 14 + w > plotWidth) this.tipSide = "l";
+    else if (this.tipSide === "l" && x + 14 + w + 24 <= plotWidth) this.tipSide = "r";
+    this.tip.style.left = `${this.tipSide === "r" ? x + 14 : Math.max(4, x - 14 - w)}px`;
     this.tip.style.top = `${PAD.top}px`;
   }
 }

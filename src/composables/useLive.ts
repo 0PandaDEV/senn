@@ -129,9 +129,30 @@ async function revalidate(): Promise<void> {
 
 window.revalidate = revalidate;
 
+function run() {
+  if (document.querySelector(".chart-plot:hover")) {
+    timer = window.setTimeout(run, 500);
+    return;
+  }
+  void revalidate();
+}
+
 function schedule() {
   clearTimeout(timer);
-  timer = window.setTimeout(() => void revalidate(), 350);
+  timer = window.setTimeout(run, 350);
+}
+
+let statsTimer = 0;
+let statsAt = 0;
+
+function scheduleStats() {
+  if (statsTimer) return;
+  const wait = Math.max(350, 5000 - (Date.now() - statsAt));
+  statsTimer = window.setTimeout(() => {
+    statsTimer = 0;
+    statsAt = Date.now();
+    run();
+  }, wait);
 }
 
 type LiveMessage = { t: string; [key: string]: unknown };
@@ -176,7 +197,10 @@ function connect(attempt = 0) {
     } catch {
       return;
     }
-    if (message.t === "hub" && (message.kind !== "stats" || document.querySelector(".usage, .host-card"))) schedule();
+    if (message.t === "hub") {
+      if (message.kind !== "stats") schedule();
+      else if (document.querySelector(".usage, .host-card")) scheduleStats();
+    }
     for (const handler of handlers) handler(message);
   });
   socket.addEventListener("close", () => {

@@ -178,7 +178,9 @@ class Panel {
   private screen = new IntersectionObserver((entries) => {
     for (const entry of entries) {
       const slot = this.owners.get(entry.target);
-      if (slot) slot.onScreen = entry.isIntersecting;
+      if (!slot) continue;
+      slot.onScreen = entry.isIntersecting;
+      if (slot.onScreen && slot.loaded && !slot.dirty) slot.chart.setLines([...slot.lines.values()], this.span, false);
     }
   });
   private observer = new IntersectionObserver(
@@ -460,6 +462,7 @@ class Panel {
     this.appended++;
     for (const slot of this.slots) {
       if (!slot.loaded || slot.dirty) continue;
+      const known = slot.lines.size;
       slot.def.defs.forEach((def, index) => {
         const grouped = def.by !== undefined && !["sum", "count", "stopped"].includes(def.by);
         const scale = def.scale ?? 1;
@@ -485,10 +488,11 @@ class Panel {
       if (slot.blank && [...slot.lines.values()].some((l) => l.points.length)) {
         slot.blank = false;
         slot.chart.empty(null);
-        slot.chart.setLines([...slot.lines.values()], this.span);
+        slot.chart.setLines([...slot.lines.values()], this.span, false);
       }
-      slot.chart.setSpan(this.span);
-      if (this.appended % 5 === 0) slot.chart.setLines([...slot.lines.values()], this.span);
+      if (!slot.onScreen) continue;
+      if (slot.lines.size !== known || this.appended % 5 === 0) slot.chart.setLines([...slot.lines.values()], this.span, false);
+      else slot.chart.setSpan(this.span);
     }
   }
 }
