@@ -1,0 +1,24 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg"
+  xmlns:xlink="http://www.w3.org/1999/xlink">
+  <rect width="512" height="512" rx="128" fill="#0E0E0F"
+    style="fill:#0E0E0F;fill:color(display-p3 0.0549 0.0549 0.0588);fill-opacity:1;" />
+  <use xlink:href="#stroke0_2_59" fill="url(#paint0_linear_2_59)" />
+  <mask id="stroke1_2_59" fill="white">
+    <use xlink:href="#stroke0_2_59" />
+  </mask>
+  <path
+    d="M112.882 362.595L194.946 150.143C200.146 136.68 219.5 137.61 223.385 151.511L251.274 251.304C255.148 265.166 274.427 266.144 279.684 252.746L295.907 211.397C300.578 199.494 317.045 198.517 323.089 209.785L404.151 360.91C409.511 370.902 402.272 383 390.933 383H126.874C116.338 383 109.085 372.423 112.882 362.595Z"
+    stroke-width="4" stroke="white" stroke-opacity="0.3" style="stroke:white;stroke-opacity:0.3;"
+    mask="url(#stroke1_2_59)" />
+  <defs>
+    <linearGradient id="paint0_linear_2_59" x1="249.191" y1="128.221" x2="249.191" y2="383"
+      gradientUnits="userSpaceOnUse">
+      <stop stop-color="#D55E61"
+        style="stop-color:#D55E61;stop-color:color(display-p3 0.8361 0.3674 0.3801);stop-opacity:1;" />
+      <stop offset="1" stop-color="#E5484D"
+        style="stop-color:#E5484D;stop-color:color(display-p3 0.8980 0.2824 0.3020);stop-opacity:1;" />
+    </linearGradient>
+    <path id="stroke0_2_59"
+      d="M194.946 150.143L112.882 362.595C109.085 372.423 116.338 383 126.874 383H390.933C402.272 383 409.511 370.902 404.151 360.91L323.089 209.785C317.045 198.517 300.578 199.494 295.907 211.397L279.684 252.746C274.427 266.144 255.148 265.166 251.274 251.304L223.385 151.511C219.5 137.61 200.146 136.68 194.946 150.143Z" />
+  </defs>
+</svg>

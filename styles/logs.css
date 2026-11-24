@@ -1,0 +1,80 @@
+.logs {
+  background: var(--background);
+  border: 1px solid var(--border);
+  border-radius: calc(6px * var(--k));
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  height: var(--fit-h, 500px);
+  min-height: 500px;
+
+  .logs-bar {
+    display: flex;
+    align-items: center;
+    gap: var(--space-8);
+    padding: var(--space-8);
+    background: var(--element);
+    border-bottom: 1px solid var(--border);
+
+    .logs-filter {
+      max-width: 260px;
+    }
+
+    .logs-status {
+      flex: 1;
+      text-align: right;
+      font-size: 0.75rem;
+    }
+  }
+
+  .logs-body {
+    flex: 1;
+    overflow: auto;
+    padding: var(--space-8);
+    font-size: 0.78125rem;
+    line-height: 1.55;
+    outline: none;
+
+    &.hide-time .time {
+      display: none;
+    }
+
+    .log {
+      display: flex;
+      gap: var(--space-8);
+      padding: 0;
+      white-space: pre-wrap;
+      word-break: break-all;
+
+      &:hover {
+        background: var(--element);
+      }
+
+      .time {
+        color: var(--text-muted);
+        flex: none;
+      }
+
+      .source {
+        flex: none;
+        min-width: 8ch;
+        max-width: 18ch;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .message {
+        flex: 1;
+        min-width: 0;
+      }
+
+      &.err .message {
+        color: var(--bad);
+      }
+
+      &.warn .message {
+        color: var(--warn);
+      }
+    }
+  }
+}

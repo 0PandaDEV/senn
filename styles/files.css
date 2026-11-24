@@ -1,0 +1,247 @@
+.files {
+  display: grid;
+  grid-template-columns: minmax(240px, 320px) minmax(0, 1fr);
+  gap: var(--space-16);
+  min-height: 460px;
+  height: var(--fit-h, 460px);
+
+  @media (max-width: 860px) {
+    grid-template-columns: minmax(0, 1fr);
+    height: auto;
+  }
+
+  .files-list,
+  .files-editor {
+    background: var(--element);
+    border: 1px solid var(--border);
+    border-radius: calc(6px * var(--k));
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .files-list {
+    @media (max-width: 860px) {
+      max-height: 260px;
+    }
+
+    .files-crumbs {
+      display: block;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      direction: rtl;
+      text-align: left;
+      padding: var(--space-8);
+      border-bottom: 1px solid var(--border);
+      font-size: 0.78125rem;
+      color: var(--text-muted);
+
+      button {
+        border: 0;
+        background: none;
+        color: var(--text);
+        cursor: pointer;
+        font: inherit;
+        padding: 0;
+
+        &:hover {
+          color: var(--accent);
+        }
+      }
+    }
+
+    .files-tools {
+      display: flex;
+      gap: var(--space-8);
+      padding: var(--space-8);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .files-entries {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+      overflow-y: auto;
+      flex: 1;
+      padding: var(--space-8);
+
+      .entry-empty {
+        padding: var(--space-8);
+        font-size: 0.75rem;
+      }
+
+      .entry {
+        display: grid;
+        grid-template-columns: 16px 16px minmax(0, 1fr) auto;
+        align-items: center;
+        gap: var(--space-8);
+        min-height: var(--control-h);
+        padding: var(--pad-tab);
+        padding-left: calc(var(--space-12) + var(--depth, 0) * var(--space-16));
+        line-height: 16px;
+        border-radius: calc(6px * var(--k));
+        color: var(--text-secondary);
+        cursor: pointer;
+        transition: var(--hover-transition);
+
+        .chev {
+          display: grid;
+          place-items: center;
+          color: var(--text-muted);
+
+          .icon {
+            transition: transform 0.15s;
+          }
+        }
+
+        &.expanded .chev .icon {
+          transform: rotate(90deg);
+        }
+
+        &:hover {
+          background: var(--element-hover);
+          color: var(--text);
+
+          .actions {
+            display: flex;
+            align-items: center;
+          }
+
+          .size {
+            display: none;
+          }
+        }
+
+        &.open {
+          background: var(--active-bg);
+          box-shadow: var(--active-shadow);
+          color: var(--text);
+        }
+
+        .glyph {
+          display: grid;
+          place-items: center;
+          color: var(--text-muted);
+
+          &[data-kind="dir"] {
+            color: var(--text-secondary);
+          }
+
+          &[data-kind="yaml"] {
+            color: color-mix(in srgb, var(--info) 50%, var(--accent));
+          }
+
+          &[data-kind="env"] {
+            color: var(--warn);
+          }
+
+          &[data-kind="docker"] {
+            color: var(--info);
+          }
+
+          &[data-kind="json"] {
+            color: color-mix(in srgb, var(--warn) 60%, var(--accent));
+          }
+
+          &[data-kind="shell"] {
+            color: var(--ok);
+          }
+
+          &[data-kind="conf"] {
+            color: var(--text-secondary);
+          }
+
+          &[data-kind="code"],
+          &[data-kind="markup"] {
+            color: var(--accent-hover);
+          }
+        }
+
+        .name {
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .size {
+          color: var(--text-muted);
+          font-size: 0.75rem;
+        }
+
+        .actions {
+          display: none;
+          gap: var(--space-4);
+          align-items: center;
+
+          button {
+            border: 0;
+            background: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            display: grid;
+            place-items: center;
+            height: 16px;
+            padding: 0 var(--space-4);
+
+            .icon {
+              display: block;
+            }
+
+            &:hover {
+              color: var(--text);
+            }
+
+            &[data-del]:hover {
+              color: var(--bad);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  .files-editor {
+    @media (max-width: 860px) {
+      min-height: 420px;
+    }
+
+    .files-head {
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+      padding: var(--space-8);
+      border-bottom: 1px solid var(--border);
+      font-size: 0.78125rem;
+
+      .files-name {
+        flex: 1;
+        min-width: 0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .files-dirty {
+        color: var(--warn);
+        font-size: 0.75rem;
+      }
+    }
+
+    .files-text {
+      flex: 1;
+    }
+
+    .files-error {
+      max-height: 144px;
+      overflow: auto;
+      padding: var(--space-16);
+      border-top: 1px solid color-mix(in srgb, var(--bad) 35%, var(--background));
+      background: color-mix(in srgb, var(--bad) 12%, var(--background));
+      color: var(--bad);
+      white-space: pre-wrap;
+      font-size: 0.75rem;
+    }
+  }
+}

@@ -1,0 +1,51 @@
+use topcoat::{
+    Result,
+    context::Cx,
+    router::page,
+    view::{View, view},
+};
+
+use crate::{
+    app::{PageMeta, meta},
+    components::ui::{
+        icon::{Icon, icon},
+        nav::nav,
+    },
+    components::node_card::{cards, node_card},
+    layouts::shell::shell,
+};
+
+#[page("/", with(meta("Overview · Senn")), with(PageMeta { public: false }))]
+pub async fn index(cx: &Cx) -> Result<impl View> {
+    let cards = cards().await;
+    Ok(view! {
+        shell(section: "overview",
+            <div>
+                <header class="page-head">
+                    <div class="title"><h1>"Overview"</h1></div>
+                </header>
+                <div data-live="cards">
+                if cards.is_empty() {
+                    <section class="empty">
+                        icon(name: Icon::Server, size: 28)
+                        <h2>"Nothing here yet"</h2>
+                        <p>"Senn manages Docker hosts through agents. Add an agent, run the install command on the host, and its stacks show up here."</p>
+                        <a class="button primary" (nav(cx, "/agents#add-agent"))>
+                            icon(name: Icon::Plus)
+                            "Add your first agent"
+                        </a>
+                    </section>
+                } else {
+                    <div class="grid">
+                        for c in cards {
+                            <a class="host-card" (nav(cx, format!("/hosts/{}", c.id)))>
+                                node_card(c: c)
+                            </a>
+                        }
+                    </div>
+                }
+                </div>
+            </div>
+        )
+    })
+}
