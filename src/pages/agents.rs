@@ -7,15 +7,19 @@ use topcoat::{
 
 use crate::{
     app::{PageMeta, meta},
-    components::ui::icon::{Icon, icon},
+    components::ui::{
+        button::job_button,
+        icon::{Icon, icon},
+    },
     layouts::shell::shell,
-    server::utils::{format::ago, hub, state},
+    server::utils::{format::ago, hub, release, state},
 };
 
 #[page("/agents", with(meta("Agents · Senn")), with(PageMeta { public: false }))]
 pub async fn agents(cx: &Cx) -> Result<impl View> {
     let now = state::now();
     let list = state::agents().await;
+    let releases = release::list().await;
     Ok(view! {
         shell(section: "agents",
             <div>
@@ -43,6 +47,9 @@ pub async fn agents(cx: &Cx) -> Result<impl View> {
                         <tbody>
                             for a in list {
                                 let online = hub::online(&a.id);
+                                let target = release::resolve(&releases, &a.config.channel);
+                                let running = a.info.as_ref().map(|i| i.version.clone()).unwrap_or_default();
+                                let behind = target.clone().filter(|t| !running.is_empty() && release::version_of(t) != running);
                                 <tr>
                                     <td><strong>(a.name.clone())</strong></td>
                                     <td>
@@ -60,6 +67,10 @@ pub async fn agents(cx: &Cx) -> Result<impl View> {
                                             if let Some(d) = info.docker {
                                                 " · docker " (d)
                                             }
+                                            if let Some(t) = behind.clone() {
+                                                " "
+                                                <span class="pill warn" title=(format!("{} is available", t))><i></i>(release::version_of(&t).to_string())</span>
+                                            }
                                         } else {
                                             "—"
                                         }
@@ -71,9 +82,16 @@ pub async fn agents(cx: &Cx) -> Result<impl View> {
                                             "off" => "updates ignored",
                                             _ => "notifies only",
                                         }
+                                        <div class="sub">
+                                            "agent: " (release::label(&a.config.channel))
+                                            (if a.config.self_update { " · updates itself" } else { " · manual" })
+                                        </div>
                                     </td>
                                     <td><div class="row-actions">
-                                        <button type="button" class="button" data-edit-agent=(a.id.clone()) data-name=(a.name.clone()) data-policy=(a.config.policy_default()) data-interval=(a.config.update_interval_secs / 60) data-address=(a.address.clone().unwrap_or_default()) data-detected=(a.info.as_ref().and_then(|i| i.address.clone()).unwrap_or_default())>
+                                        if online && behind.is_some() {
+                                            job_button(url: format!("/api/agents/{}/upgrade", a.id), title: format!("Update agent {}", a.name), label: "Update", glyph: Icon::Update, text: true)
+                                        }
+                                        <button type="button" class="button" data-edit-agent=(a.id.clone()) data-channel=(a.config.channel.clone()) data-self-update=(if a.config.self_update { "on" } else { "off" }) data-name=(a.name.clone()) data-policy=(a.config.policy_default()) data-interval=(a.config.update_interval_secs / 60) data-address=(a.address.clone().unwrap_or_default()) data-detected=(a.info.as_ref().and_then(|i| i.address.clone()).unwrap_or_default())>
                                             icon(name: Icon::Pencil)
                                             <span>"Edit"</span>
                                         </button>
@@ -118,8 +136,33 @@ pub async fn agents(cx: &Cx) -> Result<impl View> {
                             <span>"Address for port links " <small>"optional, host name or IP your browser can reach"</small></span>
                             <input name="address" placeholder="detected automatically" autocomplete="off">
                         </label>
+                        <div class="dialog-section">
+                            <h3>"Agent"</h3>
+                            <p>"The senn-agent binary on this host."</p>
+                        </div>
                         <label class="field">
-                            <span>"When an update is found"</span>
+                            <span>"Version"</span>
+                            <select name="channel" data-select="">
+                                <option value="stable">"Latest release"</option>
+                                <option value="nightly">"Latest nightly"</option>
+                                for r in releases.iter().take(40) {
+                                    <option value=(r.tag.clone())>(format!("Pin to {}", r.tag))</option>
+                                }
+                            </select>
+                        </label>
+                        <label class="field">
+                            <span>"Install agent updates"</span>
+                            <select name="selfUpdate" data-select="">
+                                <option value="on">"Automatically"</option>
+                                <option value="off">"Manually, with the Update button"</option>
+                            </select>
+                        </label>
+                        <div class="dialog-section">
+                            <h3>"Containers"</h3>
+                            <p>"Image updates for the stacks on this host. Single stacks and services can override this."</p>
+                        </div>
+                        <label class="field">
+                            <span>"When a newer image is found"</span>
                             <select name="defaultPolicy" data-select="">
                                 <option value="notify">"Notify only"</option>
                                 <option value="auto">"Pull and recreate automatically"</option>
@@ -127,7 +170,7 @@ pub async fn agents(cx: &Cx) -> Result<impl View> {
                             </select>
                         </label>
                         <label class="field">
-                            <span>"Check for image updates every (minutes)"</span>
+                            <span>"Check for newer images every (minutes)"</span>
                             <input type="number" name="updateIntervalMinutes" min="5" max="43200" required=(true)>
                         </label>
                         <div class="dialog-actions">

@@ -48,6 +48,8 @@ document.addEventListener("submit", async (event) => {
         defaultPolicy: String(data.defaultPolicy),
         updateIntervalMinutes: Number(data.updateIntervalMinutes),
         address: String(data.address ?? ""),
+        channel: String(data.channel ?? "stable"),
+        selfUpdate: data.selfUpdate !== "off",
       });
       (form.closest("dialog") as HTMLDialogElement).close();
       window.toast("Saved", "success");
@@ -85,6 +87,10 @@ document.addEventListener("click", async (event) => {
     (form.elements.namedItem("name") as HTMLInputElement).value = edit.dataset.name ?? "";
     (form.elements.namedItem("defaultPolicy") as HTMLSelectElement).value = edit.dataset.policy ?? "notify";
     (form.elements.namedItem("updateIntervalMinutes") as HTMLInputElement).value = edit.dataset.interval ?? "360";
+    const channel = form.elements.namedItem("channel") as HTMLSelectElement;
+    if (edit.dataset.channel && ![...channel.options].some((o) => o.value === edit.dataset.channel)) channel.add(new Option(`Pin to ${edit.dataset.channel}`, edit.dataset.channel));
+    channel.value = edit.dataset.channel ?? "stable";
+    (form.elements.namedItem("selfUpdate") as HTMLSelectElement).value = edit.dataset.selfUpdate ?? "on";
     const address = form.elements.namedItem("address") as HTMLInputElement;
     address.value = edit.dataset.address ?? "";
     address.placeholder = edit.dataset.detected ? `${edit.dataset.detected} (detected)` : "detected automatically";

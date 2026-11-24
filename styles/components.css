@@ -667,6 +667,23 @@ input[type="checkbox"] {
     font-size: 1.0625rem;
   }
 
+  .dialog-section {
+    display: grid;
+    gap: var(--space-4);
+    padding-top: var(--space-16);
+    border-top: 1px solid var(--border);
+
+    h3 {
+      font-size: 0.8125rem;
+      font-weight: 600;
+    }
+
+    p {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+  }
+
   form {
     display: grid;
     gap: var(--space-16);
