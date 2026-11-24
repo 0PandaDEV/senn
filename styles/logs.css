@@ -44,7 +44,8 @@
       gap: var(--space-8);
       padding: 0;
       white-space: pre-wrap;
-      word-break: break-all;
+      overflow-wrap: anywhere;
+      tab-size: 2;
 
       &:hover {
         background: var(--element);
@@ -53,14 +54,32 @@
       .time {
         color: var(--text-muted);
         flex: none;
+        white-space: nowrap;
       }
 
       .source {
+        position: relative;
         flex: none;
         min-width: 8ch;
         max-width: 18ch;
+        padding-left: 14px;
         overflow: hidden;
+        white-space: nowrap;
         text-overflow: ellipsis;
+        color: var(--text-secondary);
+
+        &::before {
+          content: "";
+          position: absolute;
+          left: 0;
+          top: 50%;
+          width: 6px;
+          height: 6px;
+          margin-top: -3px;
+          border-radius: 50%;
+          corner-shape: round;
+          background: var(--src);
+        }
       }
 
       .message {

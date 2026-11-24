@@ -45,7 +45,7 @@ function mount(el: HTMLElement) {
   source.addEventListener("line", (event) => {
     let text = stripAnsi((event as MessageEvent<string>).data);
     let label = "";
-    if (multi) {
+    if (multi && !/^\d{4}-\d\d-\d\dT/.test(text)) {
       const tab = text.indexOf("\t");
       if (tab !== -1) {
         label = text.slice(0, tab);
@@ -62,7 +62,7 @@ function mount(el: HTMLElement) {
     row.className = `log ${level(text)}`;
     row.innerHTML =
       `<span class="time">${escapeHtml(stamp)}</span>` +
-      (label ? `<span class="source" style="color:${hue(label)}">${escapeHtml(label)}</span>` : "") +
+      (label ? `<span class="source" style="--src:${hue(label)}">${escapeHtml(label)}</span>` : "") +
       `<span class="message">${escapeHtml(text)}</span>`;
     const needle = filter.value.trim().toLowerCase();
     if (needle && !row.textContent!.toLowerCase().includes(needle)) row.hidden = true;
