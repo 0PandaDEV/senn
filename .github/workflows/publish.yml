@@ -94,6 +94,7 @@ jobs:
       - name: Create runtime Dockerfile
         run: |
           if [ "${{ matrix.image }}" = "senn" ]; then
+            mkdir -p artifacts/data
             cat > artifacts/Dockerfile <<'EOF'
           FROM gcr.io/distroless/cc-debian12:nonroot
           ARG TARGETARCH
@@ -102,6 +103,7 @@ jobs:
           COPY dist-${TARGETARCH}/assets /app/assets
           COPY dist-${TARGETARCH}/public /app/public
           COPY dist-${TARGETARCH}/styles /app/styles
+          COPY --chown=65532:65532 data /app/data
           ENV HOST=0.0.0.0 PORT=3000
           EXPOSE 3000
           CMD ["/app/senn"]
