@@ -3,8 +3,9 @@ use std::collections::HashMap;
 use bollard::{
     Docker,
     query_parameters::{
-        ListContainersOptionsBuilder, ListImagesOptions, ListNetworksOptions, ListVolumesOptions, PruneImagesOptionsBuilder,
-        PruneNetworksOptions, PruneVolumesOptionsBuilder, RemoveImageOptionsBuilder, RemoveVolumeOptionsBuilder,
+        ListContainersOptionsBuilder, ListImagesOptions, ListNetworksOptions, ListVolumesOptions,
+        PruneImagesOptionsBuilder, PruneNetworksOptions, PruneVolumesOptionsBuilder,
+        RemoveImageOptionsBuilder, RemoveVolumeOptionsBuilder,
     },
 };
 
@@ -22,10 +23,16 @@ struct Usage {
 
 async fn usage(docker: &Docker) -> Result<Usage, String> {
     let list = docker
-        .list_containers(Some(ListContainersOptionsBuilder::default().all(true).build()))
+        .list_containers(Some(
+            ListContainersOptionsBuilder::default().all(true).build(),
+        ))
         .await
         .map_err(err)?;
-    let mut u = Usage { images: HashMap::new(), volumes: HashMap::new(), networks: HashMap::new() };
+    let mut u = Usage {
+        images: HashMap::new(),
+        volumes: HashMap::new(),
+        networks: HashMap::new(),
+    };
     for c in list {
         let name = c
             .names
@@ -49,7 +56,12 @@ async fn usage(docker: &Docker) -> Result<Usage, String> {
             }
         }
     }
-    for list in u.images.values_mut().chain(u.volumes.values_mut()).chain(u.networks.values_mut()) {
+    for list in u
+        .images
+        .values_mut()
+        .chain(u.volumes.values_mut())
+        .chain(u.networks.values_mut())
+    {
         list.sort();
         list.dedup();
     }
@@ -58,11 +70,18 @@ async fn usage(docker: &Docker) -> Result<Usage, String> {
 
 pub async fn images(docker: &Docker) -> Result<Vec<ImageRow>, String> {
     let u = usage(docker).await?;
-    let list = docker.list_images(None::<ListImagesOptions>).await.map_err(err)?;
+    let list = docker
+        .list_images(None::<ListImagesOptions>)
+        .await
+        .map_err(err)?;
     let mut out: Vec<ImageRow> = list
         .into_iter()
         .map(|i| {
-            let tags: Vec<String> = i.repo_tags.into_iter().filter(|t| t != "<none>:<none>").collect();
+            let tags: Vec<String> = i
+                .repo_tags
+                .into_iter()
+                .filter(|t| t != "<none>:<none>")
+                .collect();
             ImageRow {
                 used_by: u.images.get(&i.id).cloned().unwrap_or_default(),
                 id: i.id,
@@ -72,13 +91,21 @@ pub async fn images(docker: &Docker) -> Result<Vec<ImageRow>, String> {
             }
         })
         .collect();
-    out.sort_by(|a, b| b.created.cmp(&a.created).then_with(|| a.tags.cmp(&b.tags)).then_with(|| a.id.cmp(&b.id)));
+    out.sort_by(|a, b| {
+        b.created
+            .cmp(&a.created)
+            .then_with(|| a.tags.cmp(&b.tags))
+            .then_with(|| a.id.cmp(&b.id))
+    });
     Ok(out)
 }
 
 pub async fn volumes(docker: &Docker) -> Result<Vec<VolumeRow>, String> {
     let u = usage(docker).await?;
-    let list = docker.list_volumes(None::<ListVolumesOptions>).await.map_err(err)?;
+    let list = docker
+        .list_volumes(None::<ListVolumesOptions>)
+        .await
+        .map_err(err)?;
     let mut out: Vec<VolumeRow> = list
         .volumes
         .unwrap_or_default()
@@ -86,7 +113,8 @@ pub async fn volumes(docker: &Docker) -> Result<Vec<VolumeRow>, String> {
         .map(|v| VolumeRow {
             used_by: u.volumes.get(&v.name).cloned().unwrap_or_default(),
             stack: v.labels.get("com.docker.compose.project").cloned(),
-            anonymous: v.labels.contains_key("com.docker.volume.anonymous") || (v.name.len() == 64 && v.name.chars().all(|c| c.is_ascii_hexdigit())),
+            anonymous: v.labels.contains_key("com.docker.volume.anonymous")
+                || (v.name.len() == 64 && v.name.chars().all(|c| c.is_ascii_hexdigit())),
             name: v.name,
             driver: v.driver,
             mountpoint: v.mountpoint,
@@ -98,7 +126,10 @@ pub async fn volumes(docker: &Docker) -> Result<Vec<VolumeRow>, String> {
 
 pub async fn networks(docker: &Docker) -> Result<Vec<NetworkRow>, String> {
     let u = usage(docker).await?;
-    let list = docker.list_networks(None::<ListNetworksOptions>).await.map_err(err)?;
+    let list = docker
+        .list_networks(None::<ListNetworksOptions>)
+        .await
+        .map_err(err)?;
     let mut out: Vec<NetworkRow> = list
         .into_iter()
         .map(|n| {
@@ -107,7 +138,10 @@ pub async fn networks(docker: &Docker) -> Result<Vec<NetworkRow>, String> {
             NetworkRow {
                 used_by: u.networks.get(&id).cloned().unwrap_or_default(),
                 builtin: matches!(name.as_str(), "bridge" | "host" | "none"),
-                stack: n.labels.as_ref().and_then(|l| l.get("com.docker.compose.project").cloned()),
+                stack: n
+                    .labels
+                    .as_ref()
+                    .and_then(|l| l.get("com.docker.compose.project").cloned()),
                 subnet: n
                     .ipam
                     .and_then(|i| i.config)
@@ -128,15 +162,27 @@ pub async fn networks(docker: &Docker) -> Result<Vec<NetworkRow>, String> {
     Ok(out)
 }
 
-pub async fn remove(docker: &Docker, kind: ResourceKind, id: &str, force: bool) -> Result<(), String> {
+pub async fn remove(
+    docker: &Docker,
+    kind: ResourceKind,
+    id: &str,
+    force: bool,
+) -> Result<(), String> {
     match kind {
         ResourceKind::Image => docker
-            .remove_image(id, Some(RemoveImageOptionsBuilder::default().force(force).build()), None)
+            .remove_image(
+                id,
+                Some(RemoveImageOptionsBuilder::default().force(force).build()),
+                None,
+            )
             .await
             .map(|_| ())
             .map_err(err),
         ResourceKind::Volume => docker
-            .remove_volume(id, Some(RemoveVolumeOptionsBuilder::default().force(force).build()))
+            .remove_volume(
+                id,
+                Some(RemoveVolumeOptionsBuilder::default().force(force).build()),
+            )
             .await
             .map_err(err),
         ResourceKind::Network => docker.remove_network(id).await.map_err(err),
@@ -148,21 +194,40 @@ pub async fn prune(docker: &Docker, kind: ResourceKind) -> Result<(u64, u64), St
         ResourceKind::Image => {
             let filters = HashMap::from([("dangling", vec!["false"])]);
             let r = docker
-                .prune_images(Some(PruneImagesOptionsBuilder::default().filters(&filters).build()))
+                .prune_images(Some(
+                    PruneImagesOptionsBuilder::default()
+                        .filters(&filters)
+                        .build(),
+                ))
                 .await
                 .map_err(err)?;
-            Ok((r.images_deleted.map(|d| d.iter().filter(|i| i.deleted.is_some()).count()).unwrap_or(0) as u64, r.space_reclaimed.unwrap_or(0).max(0) as u64))
+            Ok((
+                r.images_deleted
+                    .map(|d| d.iter().filter(|i| i.deleted.is_some()).count())
+                    .unwrap_or(0) as u64,
+                r.space_reclaimed.unwrap_or(0).max(0) as u64,
+            ))
         }
         ResourceKind::Volume => {
             let filters = HashMap::from([("all", vec!["true"])]);
             let r = docker
-                .prune_volumes(Some(PruneVolumesOptionsBuilder::default().filters(&filters).build()))
+                .prune_volumes(Some(
+                    PruneVolumesOptionsBuilder::default()
+                        .filters(&filters)
+                        .build(),
+                ))
                 .await
                 .map_err(err)?;
-            Ok((r.volumes_deleted.map(|d| d.len()).unwrap_or(0) as u64, r.space_reclaimed.unwrap_or(0).max(0) as u64))
+            Ok((
+                r.volumes_deleted.map(|d| d.len()).unwrap_or(0) as u64,
+                r.space_reclaimed.unwrap_or(0).max(0) as u64,
+            ))
         }
         ResourceKind::Network => {
-            let r = docker.prune_networks(None::<PruneNetworksOptions>).await.map_err(err)?;
+            let r = docker
+                .prune_networks(None::<PruneNetworksOptions>)
+                .await
+                .map_err(err)?;
             Ok((r.networks_deleted.map(|d| d.len()).unwrap_or(0) as u64, 0))
         }
     }
@@ -176,5 +241,9 @@ pub fn size(n: u64) -> String {
         v /= 1024.0;
         i += 1;
     }
-    if i == 0 { format!("{v:.0} {}", UNITS[i]) } else { format!("{v:.1} {}", UNITS[i]) }
+    if i == 0 {
+        format!("{v:.0} {}", UNITS[i])
+    } else {
+        format!("{v:.1} {}", UNITS[i])
+    }
 }

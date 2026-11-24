@@ -96,7 +96,9 @@ pub fn start(title: String, key: String, mut handle: StreamHandle) -> u64 {
             j.state = if ok { "done" } else { "failed" };
             j.error = error.clone();
         });
-        emit(json!({ "t": "job", "ev": "end", "id": id, "ok": ok, "error": error, "title": title }));
+        emit(
+            json!({ "t": "job", "ev": "end", "id": id, "ok": ok, "error": error, "title": title }),
+        );
     });
     id
 }

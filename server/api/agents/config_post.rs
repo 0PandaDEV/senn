@@ -36,11 +36,23 @@ pub async fn update(cx: &Cx, Json(body): Json<Value>) -> Result<Response> {
         cfg.update_interval_secs = minutes.clamp(5, 60 * 24 * 30) * 60;
     }
     let address = match body.get("address").and_then(Value::as_str).map(str::trim) {
-        Some(a) => Some(a.trim_start_matches("http://").trim_start_matches("https://").trim_end_matches('/').to_string()).filter(|a| !a.is_empty()),
+        Some(a) => Some(
+            a.trim_start_matches("http://")
+                .trim_start_matches("https://")
+                .trim_end_matches('/')
+                .to_string(),
+        )
+        .filter(|a| !a.is_empty()),
         None => record.address.clone(),
     };
-    if address.as_deref().is_some_and(|a| a.contains('/') || a.contains(' ')) {
-        return Err(plain(400, "The address should be a host name or IP, without a path"));
+    if address
+        .as_deref()
+        .is_some_and(|a| a.contains('/') || a.contains(' '))
+    {
+        return Err(plain(
+            400,
+            "The address should be a host name or IP, without a path",
+        ));
     }
     let saved = set_agent_settings(&record.id, &name, &cfg, address.as_deref())
         .await

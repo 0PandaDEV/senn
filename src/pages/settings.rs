@@ -16,14 +16,46 @@ use crate::{
 };
 
 const EVENTS: [(&str, &str, &str); 8] = [
-    ("agent_offline", "Agent offline", "an agent stays disconnected for 30 seconds"),
-    ("agent_online", "Agent back online", "an agent that was reported offline reconnects"),
-    ("container_crash", "Container crashed", "a container exits with an error code or runs out of memory"),
-    ("container_unhealthy", "Container unhealthy", "a health check starts failing"),
-    ("updates", "Image updates", "an update check finds new images"),
-    ("auto_update", "Auto updates", "a service was updated automatically, or failed to"),
-    ("job_failed", "Action failed", "an action run from the panel fails"),
-    ("job_done", "Action finished", "an action run from the panel succeeds"),
+    (
+        "agent_offline",
+        "Agent offline",
+        "an agent stays disconnected for 30 seconds",
+    ),
+    (
+        "agent_online",
+        "Agent back online",
+        "an agent that was reported offline reconnects",
+    ),
+    (
+        "container_crash",
+        "Container crashed",
+        "a container exits with an error code or runs out of memory",
+    ),
+    (
+        "container_unhealthy",
+        "Container unhealthy",
+        "a health check starts failing",
+    ),
+    (
+        "updates",
+        "Image updates",
+        "an update check finds new images",
+    ),
+    (
+        "auto_update",
+        "Auto updates",
+        "a service was updated automatically, or failed to",
+    ),
+    (
+        "job_failed",
+        "Action failed",
+        "an action run from the panel fails",
+    ),
+    (
+        "job_done",
+        "Action finished",
+        "an action run from the panel succeeds",
+    ),
 ];
 
 #[page("/settings", with(meta("Settings · Senn")), with(PageMeta { public: false }))]
@@ -41,7 +73,8 @@ pub async fn settings(cx: &Cx) -> Result<impl View> {
         "job_done" => cfg.job_done,
         _ => false,
     };
-    let rows: Vec<(&str, &str, &str, bool)> = EVENTS.iter().map(|(k, l, d)| (*k, *l, *d, on(k))).collect();
+    let rows: Vec<(&str, &str, &str, bool)> =
+        EVENTS.iter().map(|(k, l, d)| (*k, *l, *d, on(k))).collect();
     Ok(view! {
         shell(section: "settings",
             <div class="settings-page">

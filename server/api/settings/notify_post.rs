@@ -12,20 +12,35 @@ use crate::server::utils::{
 };
 
 fn flag(body: &Value, key: &str) -> bool {
-    matches!(body.get(key), Some(Value::Bool(true))) || body.get(key).and_then(Value::as_str).is_some_and(|v| v == "on" || v == "true")
+    matches!(body.get(key), Some(Value::Bool(true)))
+        || body
+            .get(key)
+            .and_then(Value::as_str)
+            .is_some_and(|v| v == "on" || v == "true")
 }
 
 #[route(POST "/api/settings/notify")]
 pub async fn save(cx: &Cx, Json(body): Json<Value>) -> Result<Response> {
     let _ = cx;
-    let targets = body.get("targets").and_then(Value::as_str).unwrap_or_default().trim().to_string();
+    let targets = body
+        .get("targets")
+        .and_then(Value::as_str)
+        .unwrap_or_default()
+        .trim()
+        .to_string();
     let enabled = flag(&body, "enabled");
-    let probe = NotifyConfig { targets: targets.clone(), ..Default::default() };
+    let probe = NotifyConfig {
+        targets: targets.clone(),
+        ..Default::default()
+    };
     for u in probe.urls() {
         notify::validate(&u).map_err(|e| plain(400, &e))?;
     }
     if enabled && probe.urls().is_empty() {
-        return Err(plain(400, "Add at least one notification URL to turn notifications on"));
+        return Err(plain(
+            400,
+            "Add at least one notification URL to turn notifications on",
+        ));
     }
     let cfg = NotifyConfig {
         enabled,

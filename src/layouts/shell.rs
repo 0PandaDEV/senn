@@ -36,11 +36,18 @@ pub async fn shell(
             .or_else(|| agents.first().map(|a| a.id.clone()))
             .unwrap_or_default()
     };
-    let current_name = agents.iter().find(|a| a.id == current).map(|a| a.name.clone()).unwrap_or_default();
+    let current_name = agents
+        .iter()
+        .find(|a| a.id == current)
+        .map(|a| a.name.clone())
+        .unwrap_or_default();
     let counts = if current.is_empty() || !hub::online(&current) {
         None
     } else {
-        hub::host_state(&current).await.ok().map(|s| (s.stacks.len(), s.containers.len()))
+        hub::host_state(&current)
+            .await
+            .ok()
+            .map(|s| (s.stacks.len(), s.containers.len()))
     };
     let tabs: [(&str, &str, Icon, Option<usize>); 7] = [
         ("stacks", "Stacks", Icon::Layers, counts.map(|c| c.0)),

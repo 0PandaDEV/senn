@@ -106,7 +106,9 @@ pub struct ContainerTick {
 impl Tick {
     pub fn to_json(&self) -> Value {
         let values = |v: &[(&'static str, f64)]| -> Map<String, Value> {
-            v.iter().map(|(k, x)| ((*k).to_string(), json!(x))).collect()
+            v.iter()
+                .map(|(k, x)| ((*k).to_string(), json!(x)))
+                .collect()
         };
         json!({
             "t": "sample",
@@ -190,7 +192,11 @@ pub fn ingest(agent: &str, stats: Stats) {
 
 fn last_sample(agent: &str) -> Option<f64> {
     let labels = LABELS.lock().expect("labels lock");
-    labels.get(agent).map(|e| e.last_ts).filter(|t| *t > 0).map(|t| t as f64 / 1000.0)
+    labels
+        .get(agent)
+        .map(|e| e.last_ts)
+        .filter(|t| *t > 0)
+        .map(|t| t as f64 / 1000.0)
 }
 
 pub fn invalidate(agent: &str) {
@@ -202,7 +208,9 @@ pub fn invalidate(agent: &str) {
 async fn refresh(agent: String) {
     let result = hub::host_state(&agent).await;
     let mut labels = LABELS.lock().expect("labels lock");
-    let Some(entry) = labels.get_mut(&agent) else { return };
+    let Some(entry) = labels.get_mut(&agent) else {
+        return;
+    };
     entry.busy = false;
     if let Ok(state) = result {
         entry.known = state
@@ -246,10 +254,19 @@ fn build(raw: Raw) -> Option<Tick> {
         return None;
     }
     entry.last_ts = ts;
-    let unknown = raw.stats.containers.keys().any(|id| !entry.known.contains_key(id));
-    let due = entry.at.is_none_or(|t| t.elapsed() > Duration::from_secs(30))
+    let unknown = raw
+        .stats
+        .containers
+        .keys()
+        .any(|id| !entry.known.contains_key(id));
+    let due = entry
+        .at
+        .is_none_or(|t| t.elapsed() > Duration::from_secs(30))
         || entry.stale
-        || (unknown && entry.tried.is_none_or(|t| t.elapsed() > Duration::from_secs(5)));
+        || (unknown
+            && entry
+                .tried
+                .is_none_or(|t| t.elapsed() > Duration::from_secs(5)));
     if due && !entry.busy {
         entry.busy = true;
         entry.tried = Some(Instant::now());
@@ -298,11 +315,20 @@ fn build(raw: Raw) -> Option<Tick> {
                 ("senn_host_io_read_ops_per_second", x.io_read_ops as f64),
                 ("senn_host_io_write_ops_per_second", x.io_write_ops as f64),
                 ("senn_host_io_busy_percent", round2(x.io_busy)),
-                ("senn_host_net_rx_packets_per_second", x.net_rx_packets as f64),
-                ("senn_host_net_tx_packets_per_second", x.net_tx_packets as f64),
+                (
+                    "senn_host_net_rx_packets_per_second",
+                    x.net_rx_packets as f64,
+                ),
+                (
+                    "senn_host_net_tx_packets_per_second",
+                    x.net_tx_packets as f64,
+                ),
                 ("senn_host_net_rx_errors_per_second", x.net_rx_errors as f64),
                 ("senn_host_net_tx_errors_per_second", x.net_tx_errors as f64),
-                ("senn_host_context_switches_per_second", x.ctx_switches as f64),
+                (
+                    "senn_host_context_switches_per_second",
+                    x.ctx_switches as f64,
+                ),
                 ("senn_host_interrupts_per_second", x.interrupts as f64),
                 ("senn_host_processes_running", x.procs_running as f64),
                 ("senn_host_processes_blocked", x.procs_blocked as f64),
@@ -313,7 +339,10 @@ fn build(raw: Raw) -> Option<Tick> {
             for (name, value) in [
                 ("senn_host_pressure_cpu_percent", x.pressure_cpu),
                 ("senn_host_pressure_memory_percent", x.pressure_mem),
-                ("senn_host_pressure_memory_full_percent", x.pressure_mem_full),
+                (
+                    "senn_host_pressure_memory_full_percent",
+                    x.pressure_mem_full,
+                ),
                 ("senn_host_pressure_io_percent", x.pressure_io),
                 ("senn_host_pressure_io_full_percent", x.pressure_io_full),
                 ("senn_host_temperature_celsius", x.temp),
@@ -330,7 +359,10 @@ fn build(raw: Raw) -> Option<Tick> {
         .map(|(id, k)| {
             let mut values = vec![
                 ("senn_container_running", if k.running { 1.0 } else { 0.0 }),
-                ("senn_container_restarting", if k.restarting { 1.0 } else { 0.0 }),
+                (
+                    "senn_container_restarting",
+                    if k.restarting { 1.0 } else { 0.0 },
+                ),
             ];
             if let Some(h) = k.healthy {
                 values.push(("senn_container_healthy", if h { 1.0 } else { 0.0 }));
@@ -338,7 +370,10 @@ fn build(raw: Raw) -> Option<Tick> {
             if let Some(s) = raw.stats.containers.get(id) {
                 if s.limit > 0 {
                     values.push(("senn_container_mem_limit_bytes", s.limit as f64));
-                    values.push(("senn_container_mem_percent", round2(s.mem as f32 / s.limit as f32 * 100.0)));
+                    values.push((
+                        "senn_container_mem_percent",
+                        round2(s.mem as f32 / s.limit as f32 * 100.0),
+                    ));
                 }
                 for (name, v) in [
                     ("senn_container_pids", s.pids),
@@ -358,7 +393,10 @@ fn build(raw: Raw) -> Option<Tick> {
                     ("senn_container_net_rx_bytes_per_second", s.net_rx as f64),
                     ("senn_container_net_tx_bytes_per_second", s.net_tx as f64),
                     ("senn_container_io_read_bytes_per_second", s.io_read as f64),
-                    ("senn_container_io_write_bytes_per_second", s.io_write as f64),
+                    (
+                        "senn_container_io_write_bytes_per_second",
+                        s.io_write as f64,
+                    ),
                 ]);
             }
             ContainerTick {
@@ -513,7 +551,11 @@ fn literal(value: &str) -> String {
 
 fn selector(q: &Query) -> String {
     let mut out = format!("{}{{host={}", q.metric, literal(&q.host));
-    for (key, value) in [("container", &q.container), ("stack", &q.stack), ("service", &q.service)] {
+    for (key, value) in [
+        ("container", &q.container),
+        ("stack", &q.stack),
+        ("service", &q.service),
+    ] {
         if let Some(v) = value {
             let _ = write!(out, ",{key}={}", literal(v));
         }
@@ -547,7 +589,13 @@ fn expression(q: &Query, step: u64, kind: Kind) -> String {
 
 type Rows = Vec<(Map<String, Value>, Vec<(f64, f64)>)>;
 
-async fn range(url: &str, expr: String, from: f64, to: f64, step: u64) -> Result<Rows, (u16, String)> {
+async fn range(
+    url: &str,
+    expr: String,
+    from: f64,
+    to: f64,
+    step: u64,
+) -> Result<Rows, (u16, String)> {
     let response = CLIENT
         .get(format!("{url}/api/v1/query_range"))
         .query(&[
@@ -592,14 +640,20 @@ fn index(rows: Rows) -> HashMap<String, HashMap<i64, f64>> {
     rows.into_iter()
         .map(|(labels, points)| {
             let key = Value::Object(labels).to_string();
-            let map = points.into_iter().map(|(t, v)| ((t * 1000.0).round() as i64, v)).collect();
+            let map = points
+                .into_iter()
+                .map(|(t, v)| ((t * 1000.0).round() as i64, v))
+                .collect();
             (key, map)
         })
         .collect()
 }
 
 pub async fn query(q: Query) -> Result<Value, (u16, String)> {
-    let url = config().metrics_url.clone().ok_or((404, "Metrics storage is not configured".to_string()))?;
+    let url = config()
+        .metrics_url
+        .clone()
+        .ok_or((404, "Metrics storage is not configured".to_string()))?;
     if !METRICS.contains(&q.metric.as_str()) {
         return Err((400, "Unknown metric".into()));
     }
@@ -614,7 +668,11 @@ pub async fn query(q: Query) -> Result<Value, (u16, String)> {
     if q.to - q.from > 86400.0 * 800.0 {
         return Err((400, "Time range is too large".into()));
     }
-    let step = q.step.max(1.0).ceil().max(((q.to - q.from) / MAX_POINTS).ceil()) as u64;
+    let step = q
+        .step
+        .max(1.0)
+        .ceil()
+        .max(((q.to - q.from) / MAX_POINTS).ceil()) as u64;
     let (from, to) = (q.from, q.to);
     let raw = step <= 1;
     let limit = last_sample(&q.host).map_or(to, |last| to.min(last + step as f64 - 0.001));

@@ -270,7 +270,12 @@ pub async fn delete_agent(id: &str) -> bool {
         .unwrap_or(false)
 }
 
-pub async fn set_agent_settings(id: &str, name: &str, config: &AgentConfig, address: Option<&str>) -> Option<AgentRecord> {
+pub async fn set_agent_settings(
+    id: &str,
+    name: &str,
+    config: &AgentConfig,
+    address: Option<&str>,
+) -> Option<AgentRecord> {
     sqlx::query(
         "UPDATE agent SET name = ?, update_interval_secs = ?, auto_update = ?, default_policy = ?, address = ? WHERE id = ?",
     )
@@ -376,7 +381,10 @@ pub struct Profile {
 
 impl Profile {
     pub fn name(&self) -> String {
-        self.display_name.clone().filter(|n| !n.trim().is_empty()).unwrap_or_else(|| self.username.clone())
+        self.display_name
+            .clone()
+            .filter(|n| !n.trim().is_empty())
+            .unwrap_or_else(|| self.username.clone())
     }
 
     pub fn initials(&self) -> String {
@@ -391,20 +399,22 @@ impl Profile {
 }
 
 pub async fn profile() -> Profile {
-    sqlx::query("SELECT username, display_name, avatar_type, avatar_version FROM account WHERE id = 1")
-        .fetch_optional(pool())
-        .await
-        .ok()
-        .flatten()
-        .map(|r| {
-            let kind: Option<String> = r.get("avatar_type");
-            Profile {
-                username: r.get("username"),
-                display_name: r.get("display_name"),
-                avatar_version: kind.map(|_| r.get::<i64, _>("avatar_version")),
-            }
-        })
-        .unwrap_or_default()
+    sqlx::query(
+        "SELECT username, display_name, avatar_type, avatar_version FROM account WHERE id = 1",
+    )
+    .fetch_optional(pool())
+    .await
+    .ok()
+    .flatten()
+    .map(|r| {
+        let kind: Option<String> = r.get("avatar_type");
+        Profile {
+            username: r.get("username"),
+            display_name: r.get("display_name"),
+            avatar_version: kind.map(|_| r.get::<i64, _>("avatar_version")),
+        }
+    })
+    .unwrap_or_default()
 }
 
 pub async fn set_display_name(name: Option<&str>) -> bool {
@@ -430,5 +440,8 @@ pub async fn avatar() -> Option<(Vec<u8>, String)> {
         .await
         .ok()
         .flatten()?;
-    Some((row.get::<Option<Vec<u8>>, _>("avatar")?, row.get::<Option<String>, _>("avatar_type")?))
+    Some((
+        row.get::<Option<Vec<u8>>, _>("avatar")?,
+        row.get::<Option<String>, _>("avatar_type")?,
+    ))
 }

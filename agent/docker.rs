@@ -57,7 +57,11 @@ pub struct Counters {
 pub type Prev = HashMap<String, (Counters, std::time::Instant)>;
 
 pub fn rate(now: u64, before: u64, secs: f64) -> u64 {
-    if now < before { 0 } else { ((now - before) as f64 / secs) as u64 }
+    if now < before {
+        0
+    } else {
+        ((now - before) as f64 / secs) as u64
+    }
 }
 
 fn rss_fallback(id: &str) -> u64 {
@@ -82,8 +86,14 @@ fn rss_fallback(id: &str) -> u64 {
         * 1024
 }
 
-async fn sample_one(docker: &Docker, id: String) -> Result<(String, Counters, u64, u64, u64), String> {
-    let options = StatsOptionsBuilder::default().stream(false).one_shot(true).build();
+async fn sample_one(
+    docker: &Docker,
+    id: String,
+) -> Result<(String, Counters, u64, u64, u64), String> {
+    let options = StatsOptionsBuilder::default()
+        .stream(false)
+        .one_shot(true)
+        .build();
     let mut stream = std::pin::pin!(docker.stats(&id, Some(options)));
     let stats = tokio::time::timeout(std::time::Duration::from_secs(8), stream.next())
         .await
@@ -99,10 +109,16 @@ async fn sample_one(docker: &Docker, id: String) -> Result<(String, Counters, u6
     let memory = stats.memory_stats.as_ref();
     let cache = memory
         .and_then(|m| m.stats.as_ref())
-        .and_then(|s| s.get("inactive_file").or_else(|| s.get("total_inactive_file")))
+        .and_then(|s| {
+            s.get("inactive_file")
+                .or_else(|| s.get("total_inactive_file"))
+        })
         .copied()
         .unwrap_or(0);
-    let mut mem = memory.and_then(|m| m.usage).unwrap_or(0).saturating_sub(cache);
+    let mut mem = memory
+        .and_then(|m| m.usage)
+        .unwrap_or(0)
+        .saturating_sub(cache);
     if mem == 0 {
         mem = rss_fallback(&id);
     }
@@ -110,12 +126,20 @@ async fn sample_one(docker: &Docker, id: String) -> Result<(String, Counters, u6
     let (rx, tx) = stats
         .networks
         .as_ref()
-        .map(|n| n.values().fold((0, 0), |(r, t), v| (r + v.rx_bytes.unwrap_or(0), t + v.tx_bytes.unwrap_or(0))))
+        .map(|n| {
+            n.values().fold((0, 0), |(r, t), v| {
+                (r + v.rx_bytes.unwrap_or(0), t + v.tx_bytes.unwrap_or(0))
+            })
+        })
         .unwrap_or((0, 0));
     let (rx_packets, tx_packets) = stats
         .networks
         .as_ref()
-        .map(|n| n.values().fold((0, 0), |(r, t), v| (r + v.rx_packets.unwrap_or(0), t + v.tx_packets.unwrap_or(0))))
+        .map(|n| {
+            n.values().fold((0, 0), |(r, t), v| {
+                (r + v.rx_packets.unwrap_or(0), t + v.tx_packets.unwrap_or(0))
+            })
+        })
         .unwrap_or((0, 0));
     let throttled = stats
         .cpu_stats
@@ -123,16 +147,22 @@ async fn sample_one(docker: &Docker, id: String) -> Result<(String, Counters, u6
         .and_then(|c| c.throttling_data.as_ref())
         .and_then(|t| t.throttled_periods)
         .unwrap_or(0);
-    let pids = stats.pids_stats.as_ref().and_then(|p| p.current).unwrap_or(0);
+    let pids = stats
+        .pids_stats
+        .as_ref()
+        .and_then(|p| p.current)
+        .unwrap_or(0);
     let (read_ops, write_ops) = stats
         .blkio_stats
         .as_ref()
         .and_then(|b| b.io_serviced_recursive.as_ref())
         .map(|entries| {
-            entries.iter().fold((0, 0), |(r, w), e| match e.op.as_deref().map(str::to_lowercase).as_deref() {
-                Some("read") => (r + e.value.unwrap_or(0), w),
-                Some("write") => (r, w + e.value.unwrap_or(0)),
-                _ => (r, w),
+            entries.iter().fold((0, 0), |(r, w), e| {
+                match e.op.as_deref().map(str::to_lowercase).as_deref() {
+                    Some("read") => (r + e.value.unwrap_or(0), w),
+                    Some("write") => (r, w + e.value.unwrap_or(0)),
+                    _ => (r, w),
+                }
             })
         })
         .unwrap_or((0, 0));
@@ -141,19 +171,40 @@ async fn sample_one(docker: &Docker, id: String) -> Result<(String, Counters, u6
         .as_ref()
         .and_then(|b| b.io_service_bytes_recursive.as_ref())
         .map(|entries| {
-            entries.iter().fold((0, 0), |(r, w), e| match e.op.as_deref().map(str::to_lowercase).as_deref() {
-                Some("read") => (r + e.value.unwrap_or(0), w),
-                Some("write") => (r, w + e.value.unwrap_or(0)),
-                _ => (r, w),
+            entries.iter().fold((0, 0), |(r, w), e| {
+                match e.op.as_deref().map(str::to_lowercase).as_deref() {
+                    Some("read") => (r + e.value.unwrap_or(0), w),
+                    Some("write") => (r, w + e.value.unwrap_or(0)),
+                    _ => (r, w),
+                }
             })
         })
         .unwrap_or((0, 0));
-    Ok((id, Counters { cpu, rx, tx, read, write, rx_packets, tx_packets, throttled, read_ops, write_ops }, mem, limit, pids))
+    Ok((
+        id,
+        Counters {
+            cpu,
+            rx,
+            tx,
+            read,
+            write,
+            rx_packets,
+            tx_packets,
+            throttled,
+            read_ops,
+            write_ops,
+        },
+        mem,
+        limit,
+        pids,
+    ))
 }
 
 pub async fn sample(docker: &Docker, prev: &mut Prev) -> (HashMap<String, Sample>, Vec<String>) {
     let filters = HashMap::from([("status", vec!["running"])]);
-    let options = ListContainersOptionsBuilder::default().filters(&filters).build();
+    let options = ListContainersOptionsBuilder::default()
+        .filters(&filters)
+        .build();
     let list = match docker.list_containers(Some(options)).await {
         Ok(l) => l,
         Err(e) => return (HashMap::new(), vec![e.to_string()]),
@@ -167,7 +218,12 @@ pub async fn sample(docker: &Docker, prev: &mut Prev) -> (HashMap<String, Sample
     for r in results {
         match r {
             Ok((id, c, mem, limit, pids)) => {
-                let mut sample = Sample { mem, limit, pids, ..Default::default() };
+                let mut sample = Sample {
+                    mem,
+                    limit,
+                    pids,
+                    ..Default::default()
+                };
                 if let Some((b, at)) = prev.get(&id) {
                     let secs = now.duration_since(*at).as_secs_f64().max(0.001);
                     sample.cpu = (rate(c.cpu, b.cpu, secs) as f64 / 1e9 * 100.0) as f32;
@@ -365,7 +421,10 @@ pub fn events(docker: &Docker) -> impl Stream<Item = Event> + use<> {
 pub fn notable(e: &Event) -> bool {
     match e.action.as_str() {
         "oom" => true,
-        "die" => !matches!(e.attrs.get("exitCode").map(String::as_str), Some("0" | "137" | "143") | None),
+        "die" => !matches!(
+            e.attrs.get("exitCode").map(String::as_str),
+            Some("0" | "137" | "143") | None
+        ),
         a => a.starts_with("health_status: unhealthy"),
     }
 }

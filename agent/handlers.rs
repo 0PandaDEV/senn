@@ -10,8 +10,9 @@ use serde_json::{Value, json};
 use tokio::sync::mpsc::UnboundedSender;
 
 use crate::{
-    compose, docker, files, resources,
+    compose, docker, files,
     proto::{AgentConfig, FromAgent, HostState, Op, ResourceKind, StackAction},
+    resources,
     updates::Updates,
 };
 
@@ -156,17 +157,19 @@ pub async fn run_stack(
         files::remove(&ctx.stacks_dir, stack)?;
         line(format!("removed {}", dir.display()));
     }
-    if action == StackAction::Update {
-        if let Ok(st) = state(ctx).await {
-            let images: Vec<String> = st
-                .containers
-                .iter()
-                .filter(|c| c.stack.as_deref() == Some(stack))
-                .filter(|c| service.is_none() || c.service.as_deref() == service)
-                .map(|c| c.image.clone())
-                .collect();
-            ctx.updates.refresh(&ctx.docker, &st.containers, &images).await;
-        }
+    if action == StackAction::Update
+        && let Ok(st) = state(ctx).await
+    {
+        let images: Vec<String> = st
+            .containers
+            .iter()
+            .filter(|c| c.stack.as_deref() == Some(stack))
+            .filter(|c| service.is_none() || c.service.as_deref() == service)
+            .map(|c| c.image.clone())
+            .collect();
+        ctx.updates
+            .refresh(&ctx.docker, &st.containers, &images)
+            .await;
     }
     Ok(())
 }
@@ -207,7 +210,8 @@ pub async fn update_all(ctx: &Ctx, mut line: impl FnMut(String)) -> Result<(), S
     let mut failed = Vec::new();
     for (i, (stack, service)) in targets.into_iter().enumerate() {
         line(format!("» [{}/{total}] {stack}/{service}", i + 1));
-        if let Err(e) = run_stack(ctx, &stack, StackAction::Update, Some(&service), &mut line).await {
+        if let Err(e) = run_stack(ctx, &stack, StackAction::Update, Some(&service), &mut line).await
+        {
             line(format!("failed: {e}"));
             failed.push(format!("{stack}/{service}"));
         }
@@ -215,7 +219,11 @@ pub async fn update_all(ctx: &Ctx, mut line: impl FnMut(String)) -> Result<(), S
     if failed.is_empty() {
         Ok(())
     } else {
-        Err(format!("{} of {total} failed: {}", failed.len(), failed.join(", ")))
+        Err(format!(
+            "{} of {total} failed: {}",
+            failed.len(),
+            failed.join(", ")
+        ))
     }
 }
 
@@ -274,13 +282,18 @@ pub fn spawn_stream(
                     ResourceKind::Network => "networks",
                 };
                 chunk(format!("pruning unused {what}…"));
-                resources::prune(&ctx.docker, kind).await.map(|(count, space)| {
-                    if kind == ResourceKind::Network {
-                        chunk(format!("» removed {count} {what}"));
-                    } else {
-                        chunk(format!("» freed {} · removed {count} {what}", resources::size(space)));
-                    }
-                })
+                resources::prune(&ctx.docker, kind)
+                    .await
+                    .map(|(count, space)| {
+                        if kind == ResourceKind::Network {
+                            chunk(format!("» removed {count} {what}"));
+                        } else {
+                            chunk(format!(
+                                "» freed {} · removed {count} {what}",
+                                resources::size(space)
+                            ));
+                        }
+                    })
             }
             Op::Logs {
                 container,
@@ -313,7 +326,11 @@ async fn logs(
     let mut sources: Vec<(String, String)> = Vec::new();
     if !containers.is_empty() {
         let st = state(ctx).await?;
-        for c in st.containers.into_iter().filter(|c| containers.contains(&c.id)) {
+        for c in st
+            .containers
+            .into_iter()
+            .filter(|c| containers.contains(&c.id))
+        {
             let label = match (&c.stack, &c.service) {
                 (Some(s), Some(v)) => format!("{s}/{v}"),
                 _ => c.name.clone(),
@@ -462,12 +479,20 @@ pub async fn handle(ctx: &Ctx, op: Op) -> Result<Value, String> {
         Op::Resources { kind } => {
             let to = |v: Result<Value, serde_json::Error>| v.map_err(|e| e.to_string());
             match kind {
-                ResourceKind::Image => to(serde_json::to_value(resources::images(&ctx.docker).await?)),
-                ResourceKind::Volume => to(serde_json::to_value(resources::volumes(&ctx.docker).await?)),
-                ResourceKind::Network => to(serde_json::to_value(resources::networks(&ctx.docker).await?)),
+                ResourceKind::Image => {
+                    to(serde_json::to_value(resources::images(&ctx.docker).await?))
+                }
+                ResourceKind::Volume => {
+                    to(serde_json::to_value(resources::volumes(&ctx.docker).await?))
+                }
+                ResourceKind::Network => to(serde_json::to_value(
+                    resources::networks(&ctx.docker).await?,
+                )),
             }
         }
-        Op::RemoveResource { kind, id, force } => resources::remove(&ctx.docker, kind, &id, force).await.map(|_| Value::Null),
+        Op::RemoveResource { kind, id, force } => resources::remove(&ctx.docker, kind, &id, force)
+            .await
+            .map(|_| Value::Null),
         _ => Err("unsupported operation".into()),
     }
 }

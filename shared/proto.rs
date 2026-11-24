@@ -223,7 +223,14 @@ impl HostState {
 
 impl Op {
     pub fn streams(&self) -> bool {
-        matches!(self, Op::Stack { .. } | Op::Logs { .. } | Op::CheckUpdates | Op::UpdateAll | Op::Prune { .. })
+        matches!(
+            self,
+            Op::Stack { .. }
+                | Op::Logs { .. }
+                | Op::CheckUpdates
+                | Op::UpdateAll
+                | Op::Prune { .. }
+        )
     }
 }
 

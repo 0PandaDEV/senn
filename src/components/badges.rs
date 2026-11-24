@@ -6,8 +6,8 @@ use topcoat::{
 
 use crate::{
     components::ui::icon::{Icon, icon},
-    proto::PortInfo,
     composables::use_host::Usage,
+    proto::PortInfo,
     server::utils::format::{bits, bytes, rate, short_bits, short_bytes},
 };
 
@@ -104,8 +104,15 @@ pub async fn ports(cx: &Cx, ports: &[PortInfo], #[into] host: String) -> Result<
         .iter()
         .filter_map(|p| {
             let public = p.public?;
-            let ip = p.ip.as_deref().filter(|ip| !matches!(*ip, "0.0.0.0" | "::" | "")).unwrap_or(host.as_str());
-            let ip = if ip.contains(':') { format!("[{ip}]") } else { ip.to_string() };
+            let ip =
+                p.ip.as_deref()
+                    .filter(|ip| !matches!(*ip, "0.0.0.0" | "::" | ""))
+                    .unwrap_or(host.as_str());
+            let ip = if ip.contains(':') {
+                format!("[{ip}]")
+            } else {
+                ip.to_string()
+            };
             Some((public, p.private, p.proto.clone(), ip))
         })
         .collect();
@@ -133,7 +140,11 @@ pub async fn ports(cx: &Cx, ports: &[PortInfo], #[into] host: String) -> Result<
         } else {
             format!("{public}-{}:{from}-{to}", public + span)
         };
-        if proto == "tcp" { ports } else { format!("{ports}/{proto}") }
+        if proto == "tcp" {
+            ports
+        } else {
+            format!("{ports}/{proto}")
+        }
     };
     const SHOWN: usize = 2;
     let hidden: Vec<String> = groups.iter().skip(SHOWN).map(label).collect();

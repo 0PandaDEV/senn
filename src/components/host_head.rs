@@ -5,10 +5,7 @@ use topcoat::{
 };
 
 use crate::{
-    components::ui::{
-        button::job_button,
-        icon::Icon,
-    },
+    components::ui::{button::job_button, icon::Icon},
     composables::use_host::Host,
     server::utils::{format::ago, state},
 };
@@ -40,7 +37,11 @@ pub async fn update_check(cx: &Cx, host: &Host) -> Result<impl View> {
 }
 
 #[component]
-pub async fn host_select(cx: &Cx, #[into] current: String, #[default] variant: &str) -> Result<impl View> {
+pub async fn host_select(
+    cx: &Cx,
+    #[into] current: String,
+    #[default] variant: &str,
+) -> Result<impl View> {
     let agents = state::agents().await;
     Ok(view! {
         <select data-host-select="" data-select=(format!("ghost host-select {variant}")) aria-label="Host">

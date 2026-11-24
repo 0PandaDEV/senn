@@ -240,7 +240,10 @@ async fn sample(ctx: Arc<Ctx>, out: mpsc::UnboundedSender<FromAgent>) {
         }
         let data = serde_json::json!({ "containers": &samples, "host": &host });
         *ctx.samples.write().expect("samples lock") = samples;
-        let _ = out.send(FromAgent::Event { kind: "stats".into(), data });
+        let _ = out.send(FromAgent::Event {
+            kind: "stats".into(),
+            data,
+        });
         tokio::time::sleep(Duration::from_secs(1)).await;
     }
 }

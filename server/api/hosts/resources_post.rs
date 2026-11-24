@@ -28,11 +28,19 @@ pub async fn resource(cx: &Cx, Json(body): Json<Value>) -> Result<Response> {
     let kind = kind(cx)?;
     let op = match params::action(cx) {
         "remove" => {
-            let id = body.get("id").and_then(Value::as_str).unwrap_or_default().to_string();
+            let id = body
+                .get("id")
+                .and_then(Value::as_str)
+                .unwrap_or_default()
+                .to_string();
             if id.is_empty() {
                 return Err(plain(400, "Missing id"));
             }
-            Op::RemoveResource { kind, id, force: body.get("force").and_then(Value::as_bool).unwrap_or(false) }
+            Op::RemoveResource {
+                kind,
+                id,
+                force: body.get("force").and_then(Value::as_bool).unwrap_or(false),
+            }
         }
         "prune" => return start_job(cx, Op::Prune { kind }).await,
         _ => return Err(plain(404, "Unknown action")),

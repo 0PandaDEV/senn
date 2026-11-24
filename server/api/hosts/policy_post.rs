@@ -30,7 +30,11 @@ pub async fn policy(cx: &Cx, Json(body): Json<Value>) -> Result<Response> {
     if scope.is_empty() || scope.split('/').count() > 2 || !scope.split('/').all(valid) {
         return Err(plain(400, "Invalid scope"));
     }
-    let policy = match body.get("policy").and_then(Value::as_str).unwrap_or_default() {
+    let policy = match body
+        .get("policy")
+        .and_then(Value::as_str)
+        .unwrap_or_default()
+    {
         "" => None,
         p @ ("auto" | "notify" | "off") => Some(p),
         _ => return Err(plain(400, "Policy must be auto, notify, off or empty")),

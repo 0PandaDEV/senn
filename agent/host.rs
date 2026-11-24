@@ -38,8 +38,15 @@ fn read(path: &str) -> String {
 
 fn cpu_times() -> (u64, u64) {
     let stat = read("/proc/stat");
-    let Some(line) = stat.lines().next() else { return (0, 0) };
-    let v: Vec<u64> = line.split_whitespace().skip(1).take(8).filter_map(|x| x.parse().ok()).collect();
+    let Some(line) = stat.lines().next() else {
+        return (0, 0);
+    };
+    let v: Vec<u64> = line
+        .split_whitespace()
+        .skip(1)
+        .take(8)
+        .filter_map(|x| x.parse().ok())
+        .collect();
     let total: u64 = v.iter().sum();
     let idle = v.get(3).copied().unwrap_or(0) + v.get(4).copied().unwrap_or(0);
     (total.saturating_sub(idle), total)
@@ -56,15 +63,40 @@ fn meminfo() -> (u64, u64, u64, u64) {
     };
     let total = get("MemTotal:");
     let swap_total = get("SwapTotal:");
-    (total, total.saturating_sub(get("MemAvailable:")), swap_total, swap_total.saturating_sub(get("SwapFree:")))
+    (
+        total,
+        total.saturating_sub(get("MemAvailable:")),
+        swap_total,
+        swap_total.saturating_sub(get("SwapFree:")),
+    )
 }
 
 fn virtual_name(name: &str) -> bool {
     name == "lo"
         || name.contains('.')
-        || ["veth", "docker", "br-", "virbr", "tun", "tap", "cni", "flannel", "tailscale", "wg", "zt", "ppp", "dummy", "ifb", "vxlan", "bond", "macvlan", "kube", "cali"]
-            .iter()
-            .any(|p| name.starts_with(p))
+        || [
+            "veth",
+            "docker",
+            "br-",
+            "virbr",
+            "tun",
+            "tap",
+            "cni",
+            "flannel",
+            "tailscale",
+            "wg",
+            "zt",
+            "ppp",
+            "dummy",
+            "ifb",
+            "vxlan",
+            "bond",
+            "macvlan",
+            "kube",
+            "cali",
+        ]
+        .iter()
+        .any(|p| name.starts_with(p))
 }
 
 fn interfaces() -> Vec<(String, Vec<u64>)> {
@@ -73,13 +105,18 @@ fn interfaces() -> Vec<(String, Vec<u64>)> {
         .skip(2)
         .filter_map(|l| {
             let (name, rest) = l.split_once(':')?;
-            let v: Vec<u64> = rest.split_whitespace().filter_map(|x| x.parse().ok()).collect();
+            let v: Vec<u64> = rest
+                .split_whitespace()
+                .filter_map(|x| x.parse().ok())
+                .collect();
             (v.len() >= 12).then(|| (name.trim().to_string(), v))
         })
         .collect();
     let physical: Vec<_> = rows
         .iter()
-        .filter(|(n, _)| n != "lo" && std::path::Path::new(&format!("/sys/class/net/{n}/device")).exists())
+        .filter(|(n, _)| {
+            n != "lo" && std::path::Path::new(&format!("/sys/class/net/{n}/device")).exists()
+        })
         .cloned()
         .collect();
     if !physical.is_empty() {
@@ -89,11 +126,16 @@ fn interfaces() -> Vec<(String, Vec<u64>)> {
 }
 
 fn net() -> (u64, u64) {
-    interfaces().iter().fold((0, 0), |(r, t), (_, v)| (r + v[0], t + v[8]))
+    interfaces()
+        .iter()
+        .fold((0, 0), |(r, t), (_, v)| (r + v[0], t + v[8]))
 }
 
 fn whole_disk(name: &str) -> bool {
-    let digits_tail = |prefix: &str| name.strip_prefix(prefix).is_some_and(|r| !r.is_empty() && r.chars().all(|c| c.is_ascii_lowercase()));
+    let digits_tail = |prefix: &str| {
+        name.strip_prefix(prefix)
+            .is_some_and(|r| !r.is_empty() && r.chars().all(|c| c.is_ascii_lowercase()))
+    };
     if digits_tail("sd") || digits_tail("vd") || digits_tail("xvd") || digits_tail("hd") {
         return true;
     }
@@ -114,17 +156,32 @@ fn disk_io() -> (u64, u64) {
             if !whole_disk(v.get(2)?) {
                 return None;
             }
-            Some((v.get(5)?.parse::<u64>().ok()? * 512, v.get(9)?.parse::<u64>().ok()? * 512))
+            Some((
+                v.get(5)?.parse::<u64>().ok()? * 512,
+                v.get(9)?.parse::<u64>().ok()? * 512,
+            ))
         })
         .fold((0, 0), |(r, w), (a, b)| (r + a, w + b))
 }
 
 async fn disk_usage(path: &str) -> (u64, u64) {
-    let out = tokio::process::Command::new("df").args(["-B1", "--output=size,used", path]).output().await;
+    let out = tokio::process::Command::new("df")
+        .args(["-B1", "--output=size,used", path])
+        .output()
+        .await;
     let Ok(out) = out else { return (0, 0) };
     let text = String::from_utf8_lossy(&out.stdout);
-    let v: Vec<u64> = text.lines().nth(1).unwrap_or("").split_whitespace().filter_map(|x| x.parse().ok()).collect();
-    (v.first().copied().unwrap_or(0), v.get(1).copied().unwrap_or(0))
+    let v: Vec<u64> = text
+        .lines()
+        .nth(1)
+        .unwrap_or("")
+        .split_whitespace()
+        .filter_map(|x| x.parse().ok())
+        .collect();
+    (
+        v.first().copied().unwrap_or(0),
+        v.get(1).copied().unwrap_or(0),
+    )
 }
 
 fn stat_line(stat: &str, key: &str) -> u64 {
@@ -146,9 +203,14 @@ fn cpu_fields(stat: &str) -> [u64; 8] {
 }
 
 fn net_extra() -> (u64, u64, u64, u64) {
-    interfaces()
-        .iter()
-        .fold((0, 0, 0, 0), |a, (_, v)| (a.0 + v[1], a.1 + v[9], a.2 + v[2] + v[3], a.3 + v[10] + v[11]))
+    interfaces().iter().fold((0, 0, 0, 0), |a, (_, v)| {
+        (
+            a.0 + v[1],
+            a.1 + v[9],
+            a.2 + v[2] + v[3],
+            a.3 + v[10] + v[11],
+        )
+    })
 }
 
 struct Disks {
@@ -158,7 +220,11 @@ struct Disks {
 }
 
 fn disk_ops() -> Disks {
-    let mut out = Disks { read_ops: 0, write_ops: 0, ticks: HashMap::new() };
+    let mut out = Disks {
+        read_ops: 0,
+        write_ops: 0,
+        ticks: HashMap::new(),
+    };
     for l in read("/proc/diskstats").lines() {
         let v: Vec<&str> = l.split_whitespace().collect();
         let Some(name) = v.get(2) else { continue };
@@ -176,7 +242,10 @@ fn disk_ops() -> Disks {
 fn vmstat(key: &str) -> u64 {
     read("/proc/vmstat")
         .lines()
-        .find_map(|l| l.strip_prefix(key).and_then(|v| v.trim().parse::<u64>().ok()))
+        .find_map(|l| {
+            l.strip_prefix(key)
+                .and_then(|v| v.trim().parse::<u64>().ok())
+        })
         .unwrap_or(0)
 }
 
@@ -194,20 +263,39 @@ fn pressure(kind: &str) -> (Option<f32>, Option<f32>) {
 fn temperature() -> Option<f32> {
     let mut best: Option<f32> = None;
     let mut consider = |path: std::path::PathBuf| {
-        if let Some(milli) = std::fs::read_to_string(path).ok().and_then(|t| t.trim().parse::<f32>().ok()) {
+        if let Some(milli) = std::fs::read_to_string(path)
+            .ok()
+            .and_then(|t| t.trim().parse::<f32>().ok())
+        {
             let c = milli / 1000.0;
             if c > 0.0 && c < 150.0 {
                 best = Some(best.map_or(c, |b| b.max(c)));
             }
         }
     };
-    for dir in std::fs::read_dir("/sys/class/thermal").into_iter().flatten().flatten() {
-        if dir.file_name().to_string_lossy().starts_with("thermal_zone") {
+    for dir in std::fs::read_dir("/sys/class/thermal")
+        .into_iter()
+        .flatten()
+        .flatten()
+    {
+        if dir
+            .file_name()
+            .to_string_lossy()
+            .starts_with("thermal_zone")
+        {
             consider(dir.path().join("temp"));
         }
     }
-    for dir in std::fs::read_dir("/sys/class/hwmon").into_iter().flatten().flatten() {
-        for entry in std::fs::read_dir(dir.path()).into_iter().flatten().flatten() {
+    for dir in std::fs::read_dir("/sys/class/hwmon")
+        .into_iter()
+        .flatten()
+        .flatten()
+    {
+        for entry in std::fs::read_dir(dir.path())
+            .into_iter()
+            .flatten()
+            .flatten()
+        {
             let name = entry.file_name().to_string_lossy().to_string();
             if name.starts_with("temp") && name.ends_with("_input") {
                 consider(entry.path());
@@ -245,11 +333,25 @@ pub async fn sample(prev: &mut Prev, stacks_dir: &str) -> HostStats {
     let disks = disk_ops();
     let swap_in = vmstat("pswpin ");
     let swap_out = vmstat("pswpout ");
-    let load: Vec<f32> = read("/proc/loadavg").split_whitespace().take(3).filter_map(|x| x.parse().ok()).collect();
-    let uptime = read("/proc/uptime").split_whitespace().next().and_then(|x| x.parse::<f64>().ok()).unwrap_or(0.0) as u64;
+    let load: Vec<f32> = read("/proc/loadavg")
+        .split_whitespace()
+        .take(3)
+        .filter_map(|x| x.parse().ok())
+        .collect();
+    let uptime = read("/proc/uptime")
+        .split_whitespace()
+        .next()
+        .and_then(|x| x.parse::<f64>().ok())
+        .unwrap_or(0.0) as u64;
     let mut stats = HostStats {
-        cores: std::thread::available_parallelism().map(|n| n.get() as u32).unwrap_or(1),
-        load: [load.first().copied().unwrap_or(0.0), load.get(1).copied().unwrap_or(0.0), load.get(2).copied().unwrap_or(0.0)],
+        cores: std::thread::available_parallelism()
+            .map(|n| n.get() as u32)
+            .unwrap_or(1),
+        load: [
+            load.first().copied().unwrap_or(0.0),
+            load.get(1).copied().unwrap_or(0.0),
+            load.get(2).copied().unwrap_or(0.0),
+        ],
         mem_total,
         mem_used,
         swap_total,
@@ -263,12 +365,20 @@ pub async fn sample(prev: &mut Prev, stacks_dir: &str) -> HostStats {
     if let Some(at) = prev.at {
         let secs = now.duration_since(at).as_secs_f64().max(0.001);
         let dt = total.saturating_sub(prev.total);
-        stats.cpu = if dt > 0 { busy.saturating_sub(prev.busy) as f32 / dt as f32 * 100.0 } else { 0.0 };
+        stats.cpu = if dt > 0 {
+            busy.saturating_sub(prev.busy) as f32 / dt as f32 * 100.0
+        } else {
+            0.0
+        };
         stats.net_rx = rate(rx, prev.rx, secs);
         stats.net_tx = rate(tx, prev.tx, secs);
         stats.io_read = rate(rd, prev.read, secs);
         stats.io_write = rate(wr, prev.write, secs);
-        let dt_cpu = cpu_now.iter().sum::<u64>().saturating_sub(prev.cpu.iter().sum::<u64>()).max(1) as f32;
+        let dt_cpu = cpu_now
+            .iter()
+            .sum::<u64>()
+            .saturating_sub(prev.cpu.iter().sum::<u64>())
+            .max(1) as f32;
         let part = |i: usize| cpu_now[i].saturating_sub(prev.cpu[i]) as f32;
         let loadavg = read("/proc/loadavg");
         let procs_total = loadavg
@@ -280,7 +390,11 @@ pub async fn sample(prev: &mut Prev, stacks_dir: &str) -> HostStats {
         let busy_max = disks
             .ticks
             .iter()
-            .map(|(name, t)| t.saturating_sub(prev.ticks.get(name).copied().unwrap_or(*t)) as f64 / (secs * 1000.0) * 100.0)
+            .map(|(name, t)| {
+                t.saturating_sub(prev.ticks.get(name).copied().unwrap_or(*t)) as f64
+                    / (secs * 1000.0)
+                    * 100.0
+            })
             .fold(0.0_f64, f64::max)
             .min(100.0);
         let (cpu_p, _) = pressure("cpu");
@@ -316,7 +430,11 @@ pub async fn sample(prev: &mut Prev, stacks_dir: &str) -> HostStats {
                 .and_then(|l| l.split_whitespace().skip_while(|f| *f != "inuse").nth(1))
                 .and_then(|v| v.parse().ok())
                 .unwrap_or(0),
-            open_files: read("/proc/sys/fs/file-nr").split_whitespace().next().and_then(|v| v.parse().ok()).unwrap_or(0),
+            open_files: read("/proc/sys/fs/file-nr")
+                .split_whitespace()
+                .next()
+                .and_then(|v| v.parse().ok())
+                .unwrap_or(0),
             pressure_cpu: cpu_p,
             pressure_mem: mem_p,
             pressure_mem_full: mem_full,
@@ -350,4 +468,3 @@ pub async fn sample(prev: &mut Prev, stacks_dir: &str) -> HostStats {
     };
     stats
 }
-

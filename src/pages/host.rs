@@ -17,7 +17,7 @@ use crate::{
             policy::policy_select,
         },
     },
-    composables::use_host::{load, stack_issues, stack_summary, Usage},
+    composables::use_host::{Usage, load, stack_issues, stack_summary},
     layouts::shell::shell,
 };
 

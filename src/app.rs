@@ -27,7 +27,15 @@ const COMMIT_MONO: Font = font! {
     }
 };
 
-const STYLES: [&str; 7] = ["base", "layout", "components", "editor", "files", "logs", "metrics"];
+const STYLES: [&str; 7] = [
+    "base",
+    "layout",
+    "components",
+    "editor",
+    "files",
+    "logs",
+    "metrics",
+];
 
 const SCRIPTS: [&str; 18] = [
     "useLive",

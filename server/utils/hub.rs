@@ -191,7 +191,9 @@ pub struct Stats {
 
 fn patch_stats(conn: &Conn, stats: &Stats) {
     let mut cache = conn.cache.lock().expect("cache lock");
-    let Some((_, state)) = cache.as_mut() else { return };
+    let Some((_, state)) = cache.as_mut() else {
+        return;
+    };
     state.host = stats.host.clone();
     for c in &mut state.containers {
         match stats.containers.get(&c.id) {

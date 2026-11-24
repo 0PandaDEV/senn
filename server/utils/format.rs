@@ -44,7 +44,11 @@ pub fn bits(bytes_per_sec: u64) -> String {
         b if b >= 1e3 => (b / 1e3, "Kbps"),
         b => (b, "bps"),
     };
-    if unit == "bps" || v >= 100.0 { format!("{v:.0} {unit}") } else { format!("{v:.1} {unit}") }
+    if unit == "bps" || v >= 100.0 {
+        format!("{v:.0} {unit}")
+    } else {
+        format!("{v:.1} {unit}")
+    }
 }
 
 fn short(v: f64, base: f64) -> String {

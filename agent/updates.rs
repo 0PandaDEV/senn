@@ -70,7 +70,8 @@ impl Updates {
             .collect();
         let fresh = self.run(docker, &subset, |_| {}).await;
         let mut data = self.data.lock().expect("updates lock").clone();
-        data.items.retain(|i| !fresh.iter().any(|f| f.image == i.image));
+        data.items
+            .retain(|i| !fresh.iter().any(|f| f.image == i.image));
         data.items.extend(fresh);
         data.items.sort_by(|a, b| a.image.cmp(&b.image));
         self.store(data);

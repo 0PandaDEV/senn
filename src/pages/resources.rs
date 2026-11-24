@@ -24,12 +24,16 @@ use crate::{
     },
 };
 
-async fn list<T: serde::de::DeserializeOwned>(host: &Host, kind: ResourceKind) -> std::result::Result<Vec<T>, String> {
+async fn list<T: serde::de::DeserializeOwned>(
+    host: &Host,
+    kind: ResourceKind,
+) -> std::result::Result<Vec<T>, String> {
     if !host.online {
         return Err("This agent is offline.".into());
     }
     let value = hub::request(&host.record.id, Op::Resources { kind }).await?;
-    serde_json::from_value(value).map_err(|_| "Update the agent on this host to manage this.".into())
+    serde_json::from_value(value)
+        .map_err(|_| "Update the agent on this host to manage this.".into())
 }
 
 fn body(id: &str) -> String {
@@ -103,7 +107,13 @@ pub async fn volumes(cx: &Cx) -> Result<impl View> {
     let host = load(cx).await?;
     let id = host.record.id.clone();
     let rows = list::<VolumeRow>(&host, ResourceKind::Volume).await;
-    let summary = rows.as_ref().ok().map(|r| format!("{} volumes · {} unused", r.len(), r.iter().filter(|v| v.used_by.is_empty()).count()));
+    let summary = rows.as_ref().ok().map(|r| {
+        format!(
+            "{} volumes · {} unused",
+            r.len(),
+            r.iter().filter(|v| v.used_by.is_empty()).count()
+        )
+    });
     Ok(view! {
         shell(section: "host", host: id.as_str(), tab: "volumes",
             <div data-agent=(id.clone())>

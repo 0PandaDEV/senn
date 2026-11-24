@@ -80,9 +80,10 @@ pub async fn middleware(cx: &Cx, body: Body, next: Next<'_>) -> Result<Response>
     match result {
         Ok(mut response) => {
             if revalidate {
-                response
-                    .headers_mut()
-                    .insert(http::header::CACHE_CONTROL, HeaderValue::from_static("no-cache"));
+                response.headers_mut().insert(
+                    http::header::CACHE_CONTROL,
+                    HeaderValue::from_static("no-cache"),
+                );
             }
             Ok(response)
         }

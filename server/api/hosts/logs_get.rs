@@ -21,7 +21,13 @@ pub async fn logs(cx: &Cx) -> Result<Sse<impl Stream<Item = Result<Event>> + use
         stack: q.get("stack").cloned().filter(|s| !s.is_empty()),
         containers: q
             .get("containers")
-            .map(|c| c.split(',').filter(|s| !s.is_empty()).take(64).map(String::from).collect())
+            .map(|c| {
+                c.split(',')
+                    .filter(|s| !s.is_empty())
+                    .take(64)
+                    .map(String::from)
+                    .collect()
+            })
             .unwrap_or_default(),
         tail: q
             .get("tail")

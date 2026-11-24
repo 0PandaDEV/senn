@@ -7,7 +7,12 @@ use topcoat::{
 use crate::server::utils::metrics;
 
 #[component]
-pub async fn metrics_panel(cx: &Cx, kind: &str, host: &str, #[default] name: &str) -> Result<impl View> {
+pub async fn metrics_panel(
+    cx: &Cx,
+    kind: &str,
+    host: &str,
+    #[default] name: &str,
+) -> Result<impl View> {
     let _ = cx;
     Ok(view! {
         if metrics::enabled() {

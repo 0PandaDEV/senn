@@ -18,7 +18,11 @@ use crate::{
 pub async fn logs(cx: &Cx) -> Result<impl View> {
     let host = load(cx).await?;
     let id = host.record.id.clone();
-    let all: Vec<ContainerInfo> = host.state.as_ref().map(|s| s.containers.clone()).unwrap_or_default();
+    let all: Vec<ContainerInfo> = host
+        .state
+        .as_ref()
+        .map(|s| s.containers.clone())
+        .unwrap_or_default();
     let mut groups: Vec<(String, Vec<ContainerInfo>)> = Vec::new();
     for c in &all {
         let g = c.stack.clone().unwrap_or_default();
@@ -30,14 +34,23 @@ pub async fn logs(cx: &Cx) -> Result<impl View> {
     groups.sort_by(|a, b| (a.0.is_empty(), &a.0).cmp(&(b.0.is_empty(), &b.0)));
     let wanted: Vec<String> = query_map(cx)
         .get("c")
-        .map(|c| c.split(',').filter(|s| all.iter().any(|x| x.id == *s)).map(String::from).collect())
+        .map(|c| {
+            c.split(',')
+                .filter(|s| all.iter().any(|x| x.id == *s))
+                .map(String::from)
+                .collect()
+        })
         .unwrap_or_default();
     let selected: Vec<String> = if wanted.is_empty() {
-        groups.first().map(|(_, list)| list.iter().map(|c| c.id.clone()).collect()).unwrap_or_default()
+        groups
+            .first()
+            .map(|(_, list)| list.iter().map(|c| c.id.clone()).collect())
+            .unwrap_or_default()
     } else {
         wanted
     };
-    let url = (!selected.is_empty()).then(|| format!("/api/hosts/{id}/logs?containers={}", selected.join(",")));
+    let url = (!selected.is_empty())
+        .then(|| format!("/api/hosts/{id}/logs?containers={}", selected.join(",")));
     Ok(view! {
         shell(section: "host", host: id.as_str(), tab: "logs",
             <div data-agent=(id.clone())>

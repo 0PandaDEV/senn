@@ -38,7 +38,11 @@ pub struct Counts {
 }
 
 fn pct(used: u64, total: u64) -> f32 {
-    if total == 0 { 0.0 } else { used as f32 / total as f32 * 100.0 }
+    if total == 0 {
+        0.0
+    } else {
+        used as f32 / total as f32 * 100.0
+    }
 }
 
 fn tone(p: f32) -> &'static str {
@@ -62,7 +66,11 @@ pub async fn cards() -> Vec<Card> {
         };
         let host = st.as_ref().and_then(|s| s.host.clone());
         let mut counts = Counts::default();
-        for c in st.as_ref().map(|s| s.containers.as_slice()).unwrap_or_default() {
+        for c in st
+            .as_ref()
+            .map(|s| s.containers.as_slice())
+            .unwrap_or_default()
+        {
             match c.state.as_str() {
                 "running" => counts.running += 1,
                 "paused" => counts.paused += 1,

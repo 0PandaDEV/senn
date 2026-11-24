@@ -7,11 +7,11 @@ use topcoat::{
 
 use crate::{
     app::{PageMeta, meta},
+    components::node_card::{cards, node_card},
     components::ui::{
         icon::{Icon, icon},
         nav::nav,
     },
-    components::node_card::{cards, node_card},
     layouts::shell::shell,
 };
 
