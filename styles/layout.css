@@ -305,6 +305,7 @@
         display: flex;
         align-items: center;
         gap: var(--space-4);
+        min-height: var(--control-h);
         padding: var(--pad-tab);
         line-height: 16px;
         color: var(--text-muted);
@@ -719,7 +720,7 @@
       align-items: center;
       gap: var(--space-8);
       min-width: 0;
-      min-height: calc(var(--control-h) - var(--space-4));
+      min-height: var(--control-h);
       padding: 0 var(--space-4) 0 var(--space-12);
     }
 
