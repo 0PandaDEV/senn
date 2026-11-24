@@ -1,0 +1,29 @@
+services:
+  senn:
+    image: ghcr.io/0pandadev/senn:latest
+    ports:
+      - "3000:3000"
+    environment:
+      SENN_BASE_URL: "" # public https URL of the panel, agents connect back to it, e.g. https://senn.example.com
+      SENN_TRUST_PROXY: 1 # reverse proxies in front of senn, 0 when exposed directly
+      SENN_METRICS_URL: http://victoriametrics:8428 # empty disables metrics
+    volumes:
+      - senn_data:/app/data
+    depends_on:
+      - victoriametrics
+    restart: unless-stopped
+
+  victoriametrics:
+    image: victoriametrics/victoria-metrics:v1.157.0
+    command:
+      - -storageDataPath=/storage
+      - -retentionPeriod=${SENN_METRICS_RETENTION:-12} # months, add a unit suffix like 30d or 2y to change it
+      - -memory.allowedBytes=256MB
+      - -search.latencyOffset=1s
+    volumes:
+      - vm_data:/storage
+    restart: unless-stopped
+
+volumes:
+  senn_data:
+  vm_data:

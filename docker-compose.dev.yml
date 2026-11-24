@@ -1,0 +1,15 @@
+services:
+  victoriametrics:
+    image: victoriametrics/victoria-metrics:v1.157.0
+    command:
+      - -storageDataPath=/storage
+      - -retentionPeriod=12
+      - -memory.allowedBytes=256MB
+      - -search.latencyOffset=1s
+    ports:
+      - "127.0.0.1:8428:8428"
+    volumes:
+      - vm_dev:/storage
+
+volumes:
+  vm_dev:
