@@ -835,6 +835,7 @@
   width: 28px;
   height: 28px;
   border-radius: 50%;
+  corner-shape: round;
   object-fit: cover;
   background: color-mix(in srgb, var(--accent) 22%, var(--element-hover));
   color: var(--text);

@@ -78,6 +78,7 @@
       border: 2px solid color-mix(in srgb, currentColor 30%, transparent);
       border-top-color: currentColor;
       border-radius: 50%;
+      corner-shape: round;
       animation: spin 0.7s linear infinite;
     }
   }
@@ -345,6 +346,7 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
+  corner-shape: round;
   background: var(--text-muted);
   flex: none;
 
@@ -380,6 +382,7 @@
     width: 6px;
     height: 6px;
     border-radius: 50%;
+    corner-shape: round;
     background: var(--text-muted);
   }
 
@@ -1123,6 +1126,7 @@ pre.code {
       width: 14px;
       height: 14px;
       border-radius: 50%;
+      corner-shape: round;
       background: var(--text-muted);
       transform: translateY(-50%);
       transition: transform 0.15s, background-color 0.15s;
