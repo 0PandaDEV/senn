@@ -323,6 +323,7 @@ async fn logs(
     out: &UnboundedSender<FromAgent>,
     id: u64,
 ) -> Result<(), String> {
+    let containers_mode = !containers.is_empty() || stack.is_some();
     let mut sources: Vec<(String, String)> = Vec::new();
     if !containers.is_empty() {
         let st = state(ctx).await?;
@@ -352,7 +353,7 @@ async fn logs(
     if sources.is_empty() {
         return Err("nothing to read logs from".into());
     }
-    let prefix = sources.len() > 1;
+    let prefix = containers_mode;
     let streams = sources.into_iter().map(|(label, cid)| {
         docker::logs(&ctx.docker, &cid, tail, follow)
             .map(move |r| r.map(|l| (label.clone(), l)))
