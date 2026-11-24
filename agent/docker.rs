@@ -265,19 +265,27 @@ pub async fn containers(
                 .get("com.docker.compose.project.working_dir")
                 .cloned();
             let project = labels.get("com.docker.compose.project").cloned();
+            let by_dir = |dir: &str| stack_dirs.get(dir.trim_end_matches('/')).cloned();
             let stack = working_dir
-                .as_ref()
-                .and_then(|d| stack_dirs.get(d.trim_end_matches('/')).cloned())
+                .as_deref()
+                .and_then(by_dir)
                 .or_else(|| {
-                    project
-                        .as_ref()
-                        .filter(|_| working_dir.is_none())
-                        .and_then(|p| {
-                            stack_dirs
-                                .values()
-                                .find(|name| name.to_lowercase() == *p)
-                                .cloned()
-                        })
+                    labels
+                        .get("com.docker.compose.project.config_files")
+                        .and_then(|files| files.split(',').next())
+                        .and_then(|file| file.rsplit_once('/'))
+                        .and_then(|(dir, _)| by_dir(dir))
+                })
+                .or_else(|| {
+                    let base = working_dir
+                        .as_deref()
+                        .map(|d| d.trim_end_matches('/'))
+                        .and_then(|d| d.rsplit('/').next());
+                    stack_dirs.values().find(|name| {
+                        base == Some(name.as_str())
+                            || project.as_deref() == Some(project_name(name).as_str())
+                    })
+                    .cloned()
                 });
             let mut ports: Vec<PortInfo> = c
                 .ports
@@ -341,6 +349,14 @@ pub async fn containers(
         .collect();
     out.sort_by(|a, b| (&a.stack, &a.service, &a.name).cmp(&(&b.stack, &b.service, &b.name)));
     Ok(out)
+}
+
+fn project_name(stack: &str) -> String {
+    stack
+        .to_lowercase()
+        .chars()
+        .filter(|c| c.is_ascii_alphanumeric() || *c == '_' || *c == '-')
+        .collect()
 }
 
 pub async fn container_action(
