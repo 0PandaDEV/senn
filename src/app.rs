@@ -29,7 +29,7 @@ const COMMIT_MONO: Font = font! {
 
 const STYLES: [&str; 7] = ["base", "layout", "components", "editor", "files", "logs", "metrics"];
 
-const SCRIPTS: [&str; 17] = [
+const SCRIPTS: [&str; 18] = [
     "useLive",
     "useToast",
     "useDialog",
@@ -45,6 +45,7 @@ const SCRIPTS: [&str; 17] = [
     "useFit",
     "useHost",
     "useSelect",
+    "usePolicy",
     "useSettings",
     "useMetrics",
 ];

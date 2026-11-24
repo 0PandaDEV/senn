@@ -83,24 +83,23 @@ impl Host {
     }
 
     pub fn has_update(&self, c: &ContainerInfo) -> bool {
-        self.update_for(&c.image)
-            .is_some_and(|u| u.status == "available")
+        c.update_policy != "off"
+            && self
+                .update_for(&c.image)
+                .is_some_and(|u| u.status == "available")
     }
 
     pub fn stack_updates(&self, name: &str) -> usize {
         self.stack_containers(name)
             .iter()
-            .filter(|c| {
-                self.update_for(&c.image)
-                    .is_some_and(|u| u.status == "available")
-            })
+            .filter(|c| self.has_update(c))
             .count()
     }
 
     pub fn updates_available(&self) -> usize {
         self.state
             .as_ref()
-            .map(|s| s.updates.iter().filter(|u| u.status == "available").count())
+            .map(|s| s.pending_images().len())
             .unwrap_or(0)
     }
 }

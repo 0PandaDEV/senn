@@ -21,7 +21,7 @@ const EVENTS: [(&str, &str, &str); 8] = [
     ("container_crash", "Container crashed", "a container exits with an error code or runs out of memory"),
     ("container_unhealthy", "Container unhealthy", "a health check starts failing"),
     ("updates", "Image updates", "an update check finds new images"),
-    ("auto_update", "Auto updates", "a service labelled senn.update=auto was updated, or failed to"),
+    ("auto_update", "Auto updates", "a service was updated automatically, or failed to"),
     ("job_failed", "Action failed", "an action run from the panel fails"),
     ("job_done", "Action finished", "an action run from the panel succeeds"),
 ];

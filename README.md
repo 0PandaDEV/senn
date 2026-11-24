@@ -55,6 +55,7 @@ Image updates are checked against the registry digest. Choose what happens when 
 
 - Notify only (default): the update shows up as a tag and in notifications, you apply it.
 - Auto update: the agent pulls and recreates the service as soon as a scheduled check finds an update.
+- Off: updates for it are ignored. No registry check, no tag, no notification, and Update all skips it.
 
 The agent checks the registry on a schedule (every 6 hours by default) and the agent settings dialog sets the interval and the default for services with nothing chosen. A compose label still works as a fallback when nothing is set in the panel:
 

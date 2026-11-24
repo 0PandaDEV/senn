@@ -65,14 +65,15 @@ pub async fn agents(cx: &Cx) -> Result<impl View> {
                                         }
                                     </td>
                                     <td class="muted">
-                                        if a.config.auto_update {
-                                            "auto every " (a.config.update_interval_secs / 60) " min"
-                                        } else {
-                                            "checks only"
+                                        "checks every " (a.config.update_interval_secs / 60) " min · "
+                                        match a.config.policy_default() {
+                                            "auto" => "updates automatically",
+                                            "off" => "updates ignored",
+                                            _ => "notifies only",
                                         }
                                     </td>
                                     <td><div class="row-actions">
-                                        <button type="button" class="button" data-edit-agent=(a.id.clone()) data-name=(a.name.clone()) data-auto=(a.config.auto_update) data-interval=(a.config.update_interval_secs / 60) data-address=(a.address.clone().unwrap_or_default()) data-detected=(a.info.as_ref().and_then(|i| i.address.clone()).unwrap_or_default())>
+                                        <button type="button" class="button" data-edit-agent=(a.id.clone()) data-name=(a.name.clone()) data-policy=(a.config.policy_default()) data-interval=(a.config.update_interval_secs / 60) data-address=(a.address.clone().unwrap_or_default()) data-detected=(a.info.as_ref().and_then(|i| i.address.clone()).unwrap_or_default())>
                                             icon(name: Icon::Pencil)
                                             <span>"Edit"</span>
                                         </button>
@@ -117,9 +118,13 @@ pub async fn agents(cx: &Cx) -> Result<impl View> {
                             <span>"Address for port links " <small>"optional, host name or IP your browser can reach"</small></span>
                             <input name="address" placeholder="detected automatically" autocomplete="off">
                         </label>
-                        <label class="check">
-                            <input type="checkbox" name="autoUpdate">
-                            <span>"Apply updates automatically for services labelled " <code>"senn.update=auto"</code></span>
+                        <label class="field">
+                            <span>"When an update is found"</span>
+                            <select name="defaultPolicy" data-select="">
+                                <option value="notify">"Notify only"</option>
+                                <option value="auto">"Pull and recreate automatically"</option>
+                                <option value="off">"Ignore (no checks, no notifications)"</option>
+                            </select>
                         </label>
                         <label class="field">
                             <span>"Check for image updates every (minutes)"</span>

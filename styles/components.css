@@ -322,7 +322,7 @@
       }
     }
 
-    :is(.row-actions, a:not(.go)) {
+    :is(.row-actions, .cell-select, a:not(.go)) {
       position: relative;
       z-index: 1;
     }
@@ -1141,6 +1141,20 @@ pre.code {
 
   input:focus-visible + span {
     box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent);
+  }
+}
+
+.cell-select {
+  display: flex;
+
+  .select {
+    flex: none;
+    width: 12rem;
+    max-width: none;
+  }
+
+  .select-button {
+    margin-left: calc(-1 * (var(--space-8) + 1px));
   }
 }
 

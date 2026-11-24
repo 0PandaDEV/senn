@@ -14,6 +14,7 @@ use crate::{
             button::job_button,
             icon::{Icon, icon},
             nav::nav,
+            policy::policy_select,
         },
     },
     composables::use_host::{load, stack_issues, stack_summary, Usage},
@@ -63,7 +64,7 @@ pub async fn host(cx: &Cx) -> Result<impl View> {
                     } else {
                         <div class="table-wrap"><table class="table" data-minor="3 4">
                             <thead>
-                                <tr><th>"Stack"</th><th>"Status"</th><th>"Usage"</th><th>"Services"</th><th></th></tr>
+                                <tr><th>"Stack"</th><th>"Status"</th><th>"Usage"</th><th>"Services"</th><th>"Updates"</th><th></th></tr>
                             </thead>
                             <tbody>
                                 for s in stacks {
@@ -101,6 +102,7 @@ pub async fn host(cx: &Cx) -> Result<impl View> {
                                                 <span class="chip idle" title=(s.services[4..].join("\n"))>(format!("+{}", s.services.len() - 4))</span>
                                             }
                                         </div></td>
+                                        <td>policy_select(agent: id.as_str(), scope: s.name.clone(), current: host.record.config.policies.get(&s.name).cloned().unwrap_or_default(), inherit: format!("Default ({})", host.record.config.policy_default()))</td>
                                         <td><div class="row-actions">
                                             if running == total && total > 0 {
                                                 job_button(url: format!("{base}/stop"), title: format!("{} · stop", s.name), label: "Stop", glyph: Icon::Stop)

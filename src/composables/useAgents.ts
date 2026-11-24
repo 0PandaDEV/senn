@@ -45,7 +45,7 @@ document.addEventListener("submit", async (event) => {
       const data = fields(form);
       await post(`/api/agents/${data.id}/config`, {
         name: data.name,
-        autoUpdate: form.querySelector<HTMLInputElement>("[name=autoUpdate]")!.checked,
+        defaultPolicy: String(data.defaultPolicy),
         updateIntervalMinutes: Number(data.updateIntervalMinutes),
         address: String(data.address ?? ""),
       });
@@ -83,7 +83,7 @@ document.addEventListener("click", async (event) => {
     const form = document.querySelector<HTMLFormElement>("form[data-agent-edit]")!;
     (form.elements.namedItem("id") as HTMLInputElement).value = edit.dataset.editAgent!;
     (form.elements.namedItem("name") as HTMLInputElement).value = edit.dataset.name ?? "";
-    (form.elements.namedItem("autoUpdate") as HTMLInputElement).checked = edit.dataset.auto === "true";
+    (form.elements.namedItem("defaultPolicy") as HTMLSelectElement).value = edit.dataset.policy ?? "notify";
     (form.elements.namedItem("updateIntervalMinutes") as HTMLInputElement).value = edit.dataset.interval ?? "360";
     const address = form.elements.namedItem("address") as HTMLInputElement;
     address.value = edit.dataset.address ?? "";

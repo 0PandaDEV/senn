@@ -15,6 +15,7 @@ use crate::{
             button::{api_button, job_button},
             icon::{Icon, icon},
             nav::nav,
+            policy::policy_select,
         },
     },
     composables::use_host::{Usage, load},
@@ -45,7 +46,7 @@ pub async fn containers(cx: &Cx) -> Result<impl View> {
                     <section class="empty small"><p>"No containers."</p></section>
                 } else {
                     <div class="table-wrap"><table class="table" data-minor="3 4">
-                        <thead><tr><th>"Name"</th><th>"State"</th><th>"Usage"</th><th>"Ports"</th><th></th></tr></thead>
+                        <thead><tr><th>"Name"</th><th>"State"</th><th>"Usage"</th><th>"Ports"</th><th>"Updates"</th><th></th></tr></thead>
                         <tbody>
                             for c in list {
                                 let update = host.has_update(&c);
@@ -68,6 +69,11 @@ pub async fn containers(cx: &Cx) -> Result<impl View> {
                                     <td>state_pill(state: &c.state, health: c.health.as_deref())</td>
                                     <td>usage(u: Usage::of(&c))</td>
                                     <td>ports(ports: &c.ports, host: host_name.clone())</td>
+                                    <td>
+                                        if let (Some(st), Some(svc)) = (c.stack.clone(), c.service.clone()) {
+                                            policy_select(agent: id.as_str(), scope: format!("{st}/{svc}"), current: host.record.config.policies.get(&format!("{st}/{svc}")).cloned().unwrap_or_default(), inherit: format!("Inherit ({})", c.update_policy))
+                                        }
+                                    </td>
                                     <td><div class="row-actions">
                                         if c.state == "running" {
                                             api_button(url: format!("/api/hosts/{id}/containers/{}/stop", c.id), label: "Stop", glyph: Icon::Stop)
