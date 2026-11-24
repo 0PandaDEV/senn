@@ -7,7 +7,7 @@ use topcoat::{
 
 use crate::{
     app::{PageMeta, meta},
-    components::node_card::{cards, node_card},
+    components::node_card::{cards, node_card, summary},
     components::ui::{
         icon::{Icon, icon},
         nav::nav,
@@ -18,6 +18,7 @@ use crate::{
 #[page("/", with(meta("Overview · Senn")), with(PageMeta { public: false }))]
 pub async fn index(cx: &Cx) -> Result<impl View> {
     let cards = cards().await;
+    let sum = summary(&cards);
     Ok(view! {
         shell(section: "overview",
             <div>
@@ -36,6 +37,24 @@ pub async fn index(cx: &Cx) -> Result<impl View> {
                         </a>
                     </section>
                 } else {
+                    <div class="overview-stats">
+                        <div class="stat-tile">
+                            <span>"Hosts"</span>
+                            <b>(sum.online) <small>" / " (sum.hosts) " online"</small></b>
+                        </div>
+                        <div class="stat-tile">
+                            <span>"Containers"</span>
+                            <b>(sum.running) <small>" / " (sum.total) " running"</small></b>
+                        </div>
+                        <div class="stat-tile">
+                            <span>"Stacks"</span>
+                            <b>(sum.stacks)</b>
+                        </div>
+                        <div class=(if sum.updates > 0 { "stat-tile warn" } else { "stat-tile" })>
+                            <span>"Updates"</span>
+                            <b>(sum.updates) <small>" available"</small></b>
+                        </div>
+                    </div>
                     <div class="grid">
                         for c in cards {
                             <a class="host-card" (nav(cx, format!("/hosts/{}", c.id)))>

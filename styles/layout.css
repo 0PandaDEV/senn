@@ -381,8 +381,47 @@
 
   .grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(min(420px, 100%), 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(540px, 100%), 1fr));
     gap: var(--space-16);
+  }
+
+  .overview-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr));
+    gap: var(--space-16);
+  }
+
+  .stat-tile {
+    display: grid;
+    gap: var(--space-4);
+    padding: var(--space-16);
+    background: var(--element);
+    border: 1px solid var(--border);
+    border-top-color: var(--border-hover);
+    border-radius: calc(6px * var(--k));
+
+    span {
+      font-size: 0.6875rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-muted);
+    }
+
+    b {
+      font-size: 1.5rem;
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+
+      small {
+        font-size: 0.75rem;
+        font-weight: 400;
+        color: var(--text-muted);
+      }
+    }
+
+    &.warn b {
+      color: var(--warn);
+    }
   }
 
   .host-card {

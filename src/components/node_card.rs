@@ -55,6 +55,26 @@ fn tone(p: f32) -> &'static str {
     }
 }
 
+pub struct Summary {
+    pub hosts: usize,
+    pub online: usize,
+    pub running: usize,
+    pub total: usize,
+    pub stacks: usize,
+    pub updates: usize,
+}
+
+pub fn summary(cards: &[Card]) -> Summary {
+    Summary {
+        hosts: cards.len(),
+        online: cards.iter().filter(|c| c.online).count(),
+        running: cards.iter().map(|c| c.running).sum(),
+        total: cards.iter().map(|c| c.total).sum(),
+        stacks: cards.iter().map(|c| c.stacks).sum(),
+        updates: cards.iter().map(|c| c.updates).sum(),
+    }
+}
+
 pub async fn cards() -> Vec<Card> {
     let mut out = Vec::new();
     for a in state::agents().await {
