@@ -89,7 +89,7 @@ async fn session(local: &Local, ctx: Arc<Ctx>) -> Result<(), String> {
     let events = tokio::spawn(forward_events(ctx.clone(), out.clone()));
     let scheduler = tokio::spawn(schedule(ctx.clone(), out.clone()));
     let sampler = tokio::spawn(sample(ctx.clone(), out.clone()));
-    let mut running: std::collections::HashMap<u64, tokio::task::JoinHandle<()>> =
+    let mut running: std::collections::HashMap<u64, (tokio::task::JoinHandle<()>, bool)> =
         std::collections::HashMap::new();
 
     let result = loop {
@@ -121,19 +121,23 @@ async fn session(local: &Local, ctx: Arc<Ctx>) -> Result<(), String> {
             }
             continue;
         };
-        running.retain(|_, h| !h.is_finished());
+        running.retain(|_, (h, _)| !h.is_finished());
         match msg {
             ToAgent::Welcome { config } | ToAgent::Config { config } => {
                 ctx.set_config(config);
             }
             ToAgent::Cancel { id } => {
-                if let Some(h) = running.remove(&id) {
+                if let Some((h, _)) = running.remove(&id) {
                     h.abort();
                 }
             }
             ToAgent::Req { id, op } => {
                 if op.streams() {
-                    running.insert(id, handlers::spawn_stream(ctx.clone(), id, op, out.clone()));
+                    let detach = !matches!(op, crate::proto::Op::Logs { .. });
+                    running.insert(
+                        id,
+                        (handlers::spawn_stream(ctx.clone(), id, op, out.clone()), detach),
+                    );
                 } else {
                     let ctx = ctx.clone();
                     let out = out.clone();
@@ -158,8 +162,10 @@ async fn session(local: &Local, ctx: Arc<Ctx>) -> Result<(), String> {
             }
         }
     };
-    for (_, h) in running {
-        h.abort();
+    for (_, (h, detach)) in running {
+        if !detach {
+            h.abort();
+        }
     }
     events.abort();
     scheduler.abort();
