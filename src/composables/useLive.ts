@@ -28,7 +28,7 @@ function owned(el: Element): boolean {
 
 function syncAttributes(from: Element, to: Element) {
   for (const attr of [...from.attributes]) {
-    if (attr.name === "data-enhanced" || attr.name === "data-busy") continue;
+    if (attr.name === "data-enhanced" || attr.name === "data-busy" || attr.name.startsWith("data-fade")) continue;
     if (!to.hasAttribute(attr.name)) from.removeAttribute(attr.name);
   }
   for (const attr of to.attributes) {

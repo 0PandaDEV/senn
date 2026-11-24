@@ -60,6 +60,55 @@ body {
   height: 100%;
 }
 
+@property --fade-l {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+
+@property --fade-r {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+
+@property --fade-t {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+
+@property --fade-b {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+
+[data-fade-on] {
+  transition: --fade-l 0.2s, --fade-r 0.2s, --fade-t 0.2s, --fade-b 0.2s;
+  mask-image:
+    linear-gradient(to right, transparent, #000 var(--fade-l), #000 calc(100% - var(--fade-r)), transparent),
+    linear-gradient(to bottom, transparent, #000 var(--fade-t), #000 calc(100% - var(--fade-b)), transparent);
+  mask-composite: intersect;
+  -webkit-mask-composite: source-in;
+
+  &[data-fade-l] {
+    --fade-l: 32px;
+  }
+
+  &[data-fade-r] {
+    --fade-r: 32px;
+  }
+
+  &[data-fade-t] {
+    --fade-t: 32px;
+  }
+
+  &[data-fade-b] {
+    --fade-b: 32px;
+  }
+}
+
 html {
   scrollbar-gutter: stable;
 }
