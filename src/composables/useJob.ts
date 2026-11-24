@@ -114,12 +114,26 @@ function ensure(id: number, title: string, key: string, state: State) {
   panel.hidden = false;
 }
 
+const queued = new Map<number, string>();
+let frame = 0;
+
+function flush() {
+  frame = 0;
+  for (const [id, text] of queued) {
+    const body = pane(id);
+    if (!body) continue;
+    const stick = body.scrollTop + body.clientHeight >= body.scrollHeight - 24;
+    const last = body.lastChild;
+    if (last instanceof Text) last.appendData(text);
+    else body.appendChild(document.createTextNode(text));
+    if (stick) body.scrollTop = body.scrollHeight;
+  }
+  queued.clear();
+}
+
 function append(id: number, text: string) {
-  const body = pane(id);
-  if (!body) return;
-  const stick = body.scrollTop + body.clientHeight >= body.scrollHeight - 24;
-  body.appendChild(document.createTextNode(stripAnsi(text) + "\n"));
-  if (stick) body.scrollTop = body.scrollHeight;
+  queued.set(id, (queued.get(id) ?? "") + stripAnsi(text) + "\n");
+  if (!frame) frame = requestAnimationFrame(flush);
 }
 
 function setState(id: number, state: State) {
@@ -129,6 +143,7 @@ function setState(id: number, state: State) {
 }
 
 async function resync() {
+  flush();
   try {
     const response = await fetch("/api/jobs", { credentials: "same-origin" });
     if (!response.ok) return;
@@ -186,6 +201,7 @@ function onEvent(message: { t: string; [key: string]: unknown }) {
   if (message.ev === "end") {
     const ok = message.ok as boolean;
     if (!ok && message.error) append(id, `error: ${message.error as string}`);
+    flush();
     setState(id, ok ? "done" : "failed");
     const title = tab(id)?.querySelector(".jobs-tab-title")?.textContent ?? "";
     const lines = (pane(id)?.textContent ?? "").trim().split("\n");
