@@ -12,6 +12,14 @@ pub struct AgentConfig {
     pub default_policy: String,
     #[serde(default)]
     pub policies: std::collections::BTreeMap<String, String>,
+    #[serde(default = "default_channel")]
+    pub channel: String,
+    #[serde(default)]
+    pub self_update: bool,
+}
+
+fn default_channel() -> String {
+    "stable".into()
 }
 
 impl Default for AgentConfig {
@@ -21,6 +29,8 @@ impl Default for AgentConfig {
             auto_update: false,
             default_policy: "notify".into(),
             policies: Default::default(),
+            channel: default_channel(),
+            self_update: true,
         }
     }
 }
@@ -106,6 +116,9 @@ pub enum ContainerAction {
 #[serde(tag = "op", rename_all = "snake_case")]
 pub enum Op {
     State,
+    SelfUpdate {
+        tag: String,
+    },
     Stack {
         stack: String,
         action: StackAction,
@@ -230,6 +243,7 @@ impl Op {
                 | Op::CheckUpdates
                 | Op::UpdateAll
                 | Op::Prune { .. }
+                | Op::SelfUpdate { .. }
         )
     }
 }

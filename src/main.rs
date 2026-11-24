@@ -22,6 +22,7 @@ async fn main() {
     server::utils::state::init().await;
     server::utils::notify::start().await;
     server::utils::metrics::start();
+    server::utils::release::start();
 
     let router = app::router().trusted_proxies(
         topcoat::router::TrustedProxies::new()

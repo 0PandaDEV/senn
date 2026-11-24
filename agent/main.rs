@@ -10,6 +10,7 @@ mod host;
 mod link;
 mod registry;
 mod resources;
+mod selfupdate;
 mod updates;
 
 use std::{path::PathBuf, sync::Arc};

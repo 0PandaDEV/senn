@@ -8,4 +8,5 @@ pub mod logging;
 pub mod metrics;
 pub mod notify;
 pub mod params;
+pub mod release;
 pub mod state;

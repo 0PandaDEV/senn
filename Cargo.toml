@@ -21,7 +21,7 @@ server = [
   "dep:http",
   "dep:bytes",
 ]
-agent = ["dep:bollard", "dep:tokio-tungstenite", "dep:clap", "dep:reqwest", "dep:base64", "dep:toml"]
+agent = ["dep:bollard", "dep:tokio-tungstenite", "dep:clap", "dep:reqwest", "dep:base64", "dep:toml", "dep:sha2"]
 
 [[bin]]
 name = "senn"

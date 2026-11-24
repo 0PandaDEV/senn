@@ -9,6 +9,7 @@ use crate::server::utils::{
     http_util::{agent_record, json},
     hub,
     logging::plain,
+    release,
     state::set_agent_settings,
 };
 
@@ -31,6 +32,15 @@ pub async fn update(cx: &Cx, Json(body): Json<Value>) -> Result<Response> {
         }
         cfg.default_policy = policy.to_string();
         cfg.auto_update = policy == "auto";
+    }
+    if let Some(channel) = body.get("channel").and_then(Value::as_str).map(str::trim) {
+        if channel.is_empty() || channel.len() > 64 || channel.contains(['/', ' ', '?', '#']) {
+            return Err(plain(400, "Unknown agent version"));
+        }
+        cfg.channel = channel.to_string();
+    }
+    if let Some(on) = body.get("selfUpdate").and_then(Value::as_bool) {
+        cfg.self_update = on;
     }
     if let Some(minutes) = body.get("updateIntervalMinutes").and_then(Value::as_u64) {
         cfg.update_interval_secs = minutes.clamp(5, 60 * 24 * 30) * 60;
@@ -58,5 +68,6 @@ pub async fn update(cx: &Cx, Json(body): Json<Value>) -> Result<Response> {
         .await
         .ok_or_else(|| plain(404, "Unknown agent"))?;
     hub::push_config(&saved.id, saved.config);
+    release::later(saved.id.clone(), 2);
     Ok(json(&json!({ "ok": true })))
 }

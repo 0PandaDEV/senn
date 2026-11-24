@@ -274,6 +274,7 @@ pub fn spawn_stream(
                 service,
             } => run_stack(&ctx, &stack, action, service.as_deref(), chunk).await,
             Op::CheckUpdates => check_updates(&ctx, chunk).await,
+            Op::SelfUpdate { tag } => crate::selfupdate::run(&tag, chunk).await,
             Op::UpdateAll => update_all(&ctx, chunk).await,
             Op::Prune { kind } => {
                 let what = match kind {
