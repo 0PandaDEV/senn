@@ -230,37 +230,41 @@ export class Chart {
   private renderLegend() {
     this.legend.replaceChildren();
     if (!this.lines.length) return;
-    const table = document.createElement("table");
-    const head = table.createTHead().insertRow();
-    for (const name of ["", "Last", "Min", "Avg", "Max"]) {
-      const th = document.createElement("th");
-      th.textContent = name;
-      head.append(th);
-    }
-    const body = table.createTBody();
-    for (const line of this.lines) {
-      const row = body.insertRow();
-      row.classList.toggle("off", !!line.hidden);
-      const first = row.insertCell();
-      const item = document.createElement("button");
-      item.type = "button";
-      item.className = "chart-key";
+    const cards = this.lines.map((line) => ({ line, stats: this.stats(line) }));
+    cards.sort((a, b) => (b.stats[3] ?? -Infinity) - (a.stats[3] ?? -Infinity));
+    const show = (v: number | null) => (v === null ? "–" : formatValue(v, this.unit));
+    for (const { line, stats } of cards) {
+      const card = document.createElement("button");
+      card.type = "button";
+      card.className = "chart-card";
+      card.classList.toggle("off", !!line.hidden);
+      card.title = line.label;
+      const head = document.createElement("span");
+      head.className = "chart-card-head";
       const swatch = document.createElement("i");
       swatch.style.background = line.color;
       const label = document.createElement("span");
       label.textContent = line.label;
-      item.title = line.label;
-      item.append(swatch, label);
-      item.addEventListener("click", () => {
+      head.append(swatch, label);
+      const last = document.createElement("b");
+      last.textContent = show(stats[0]!);
+      const range = document.createElement("span");
+      range.className = "chart-card-range";
+      for (const [name, value] of [["Min", stats[1]], ["Avg", stats[2]], ["Max", stats[3]]] as [string, number | null][]) {
+        const cell = document.createElement("span");
+        const small = document.createElement("small");
+        small.textContent = name;
+        cell.append(small, show(value));
+        range.append(cell);
+      }
+      card.append(head, last, range);
+      card.addEventListener("click", () => {
         line.hidden = !line.hidden;
         this.renderLegend();
         this.draw();
       });
-      first.append(item);
-      const stats = this.stats(line);
-      for (const v of stats) row.insertCell().textContent = v === null ? "–" : formatValue(v, this.unit);
+      this.legend.append(card);
     }
-    this.legend.append(table);
   }
 
   private stats(line: Line): (number | null)[] {
@@ -527,7 +531,8 @@ export class Chart {
     head.className = "chart-tip-time";
     head.textContent = formatTime(rows[0]!.p[0] || t);
     const body: HTMLElement[] = [head];
-    for (const { line, p } of rows) {
+    const sorted = [...rows].sort((a, b) => b.p[1] - a.p[1] || a.line.label.localeCompare(b.line.label));
+    for (const { line, p } of sorted) {
       const row = document.createElement("div");
       row.className = "chart-tip-row";
       const swatch = document.createElement("i");
