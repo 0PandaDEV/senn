@@ -68,7 +68,13 @@
     gap: var(--space-8);
     overflow-x: auto;
     scrollbar-width: none;
-    scroll-snap-type: x proximity;
+    padding-bottom: 1px;
+
+    &[data-fade-on] {
+      mask-image: linear-gradient(to right, transparent, #000 var(--fade-l), #000 calc(100% - var(--fade-r)), transparent);
+      mask-composite: add;
+      -webkit-mask-composite: source-over;
+    }
 
     &:empty {
       display: none;
@@ -90,7 +96,6 @@
     font: inherit;
     text-align: left;
     cursor: pointer;
-    scroll-snap-align: start;
     transition: var(--hover-transition);
 
     &:hover {
