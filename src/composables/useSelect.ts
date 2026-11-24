@@ -105,8 +105,8 @@ function enhance(select: HTMLSelectElement) {
   };
 
   const onScroll = (event: Event) => {
-    if (menu && event.target instanceof Node && menu.contains(event.target)) return;
-    close();
+    const target = event.target;
+    if (target === document || (target instanceof Node && target.contains(wrap))) close();
   };
 
   const open = () => {
