@@ -3,7 +3,7 @@
   grid-template-columns: 240px minmax(0, 1fr);
   gap: var(--space-8);
   padding: var(--space-8);
-  padding-bottom: calc(var(--space-16) + var(--jobs-h, 0px));
+  padding-bottom: 0;
   min-height: 100vh;
 
   @media (max-width: 860px) {
@@ -230,9 +230,11 @@
 .main {
   min-width: 0;
   padding: var(--space-16);
+  padding-bottom: calc(var(--space-16) + var(--space-8) + var(--jobs-reserve, 0px));
 
   @media (max-width: 860px) {
     padding: var(--space-8);
+    padding-bottom: calc(var(--space-16) + var(--jobs-reserve, 0px));
   }
 
   > div,

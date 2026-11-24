@@ -116,9 +116,11 @@ body {
 
 body {
   --jobs-h: 0px;
+  --jobs-reserve: 0px;
 
   &:has(#jobs:not([hidden])) {
     --jobs-h: calc(var(--jobs-bar-h) + var(--jobs-body-h));
+    --jobs-reserve: calc(var(--jobs-h) + var(--space-8));
   }
 
   &:has(#jobs:not([hidden])[data-collapsed]) {
