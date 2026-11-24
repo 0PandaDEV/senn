@@ -25,8 +25,12 @@ pub async fn update(cx: &Cx, Json(body): Json<Value>) -> Result<Response> {
     {
         name = n.chars().take(64).collect();
     }
-    if let Some(auto) = body.get("autoUpdate").and_then(Value::as_bool) {
-        cfg.auto_update = auto;
+    if let Some(policy) = body.get("defaultPolicy").and_then(Value::as_str) {
+        if !matches!(policy, "notify" | "auto" | "off") {
+            return Err(plain(400, "Default policy must be notify, auto or off"));
+        }
+        cfg.default_policy = policy.to_string();
+        cfg.auto_update = policy == "auto";
     }
     if let Some(minutes) = body.get("updateIntervalMinutes").and_then(Value::as_u64) {
         cfg.update_interval_secs = minutes.clamp(5, 60 * 24 * 30) * 60;

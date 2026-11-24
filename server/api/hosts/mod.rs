@@ -4,6 +4,7 @@ pub mod file_post;
 pub mod fs_get;
 pub mod fs_post;
 pub mod logs_get;
+pub mod policy_post;
 pub mod resources_post;
 pub mod stack_post;
 pub mod stacks_post;

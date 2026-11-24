@@ -371,7 +371,7 @@ async fn on_hub(agent: String, kind: String, data: Value) {
         }
         "updates" => {
             let Ok(st) = hub::host_state(&agent).await else { return };
-            let available: Vec<String> = st.updates.iter().filter(|u| u.status == "available").map(|u| u.image.clone()).collect();
+            let available: Vec<String> = st.pending_images();
             let before = UPDATES.lock().expect("updates lock").insert(agent.clone(), available.len());
             if available.is_empty() || before.is_none_or(|b| b >= available.len()) {
                 return;

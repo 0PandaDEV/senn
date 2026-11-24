@@ -6,14 +6,33 @@ use serde_json::Value;
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct AgentConfig {
     pub update_interval_secs: u64,
+    #[serde(default)]
     pub auto_update: bool,
+    #[serde(default)]
+    pub default_policy: String,
+    #[serde(default)]
+    pub policies: std::collections::BTreeMap<String, String>,
 }
 
 impl Default for AgentConfig {
     fn default() -> Self {
         Self {
             update_interval_secs: 6 * 60 * 60,
-            auto_update: true,
+            auto_update: false,
+            default_policy: "notify".into(),
+            policies: Default::default(),
+        }
+    }
+}
+
+impl AgentConfig {
+    pub fn policy_default(&self) -> &str {
+        match self.default_policy.as_str() {
+            "auto" => "auto",
+            "off" => "off",
+            "notify" => "notify",
+            _ if self.auto_update => "auto",
+            _ => "notify",
         }
     }
 }
@@ -185,6 +204,21 @@ pub struct NetworkRow {
     pub builtin: bool,
     pub stack: Option<String>,
     pub used_by: Vec<String>,
+}
+
+impl HostState {
+    pub fn pending_images(&self) -> Vec<String> {
+        self.updates
+            .iter()
+            .filter(|u| u.status == "available")
+            .filter(|u| {
+                self.containers
+                    .iter()
+                    .any(|c| c.image == u.image && c.update_policy != "off")
+            })
+            .map(|u| u.image.clone())
+            .collect()
+    }
 }
 
 impl Op {

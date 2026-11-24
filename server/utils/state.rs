@@ -1,4 +1,4 @@
-use std::sync::OnceLock;
+use std::{collections::BTreeMap, sync::OnceLock};
 
 use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
 use serde::{Deserialize, Serialize};
@@ -132,7 +132,9 @@ fn agent_from_row(r: &SqliteRow) -> AgentRecord {
         secret_hash: r.get("secret_hash"),
         config: AgentConfig {
             update_interval_secs: r.get::<i64, _>("update_interval_secs") as u64,
-            auto_update: r.get::<i64, _>("auto_update") != 0,
+            auto_update: r.get::<String, _>("default_policy") == "auto",
+            default_policy: r.get("default_policy"),
+            policies: BTreeMap::new(),
         },
         last_seen: r.get("last_seen"),
         info: info.and_then(|i| serde_json::from_str(&i).ok()),
@@ -140,22 +142,76 @@ fn agent_from_row(r: &SqliteRow) -> AgentRecord {
     }
 }
 
+async fn policies(agent: Option<&str>) -> BTreeMap<String, BTreeMap<String, String>> {
+    let rows = match agent {
+        Some(id) => {
+            sqlx::query("SELECT agent, scope, policy FROM update_policy WHERE agent = ?")
+                .bind(id)
+                .fetch_all(pool())
+                .await
+        }
+        None => {
+            sqlx::query("SELECT agent, scope, policy FROM update_policy")
+                .fetch_all(pool())
+                .await
+        }
+    }
+    .unwrap_or_default();
+    let mut out: BTreeMap<String, BTreeMap<String, String>> = BTreeMap::new();
+    for r in rows {
+        out.entry(r.get("agent"))
+            .or_default()
+            .insert(r.get("scope"), r.get("policy"));
+    }
+    out
+}
+
 pub async fn agents() -> Vec<AgentRecord> {
-    sqlx::query("SELECT * FROM agent ORDER BY created, name")
+    let mut all = sqlx::query("SELECT * FROM agent ORDER BY created, name")
         .fetch_all(pool())
         .await
-        .map(|rows| rows.iter().map(agent_from_row).collect())
-        .unwrap_or_default()
+        .map(|rows| rows.iter().map(agent_from_row).collect::<Vec<_>>())
+        .unwrap_or_default();
+    let mut by_agent = policies(None).await;
+    for a in &mut all {
+        a.config.policies = by_agent.remove(&a.id).unwrap_or_default();
+    }
+    all
 }
 
 pub async fn agent(id: &str) -> Option<AgentRecord> {
-    sqlx::query("SELECT * FROM agent WHERE id = ?")
+    let mut record = sqlx::query("SELECT * FROM agent WHERE id = ?")
         .bind(id)
         .fetch_optional(pool())
         .await
         .ok()
         .flatten()
-        .map(|r| agent_from_row(&r))
+        .map(|r| agent_from_row(&r))?;
+    record.config.policies = policies(Some(id)).await.remove(id).unwrap_or_default();
+    Some(record)
+}
+
+pub async fn set_update_policy(agent_id: &str, scope: &str, policy: Option<&str>) -> bool {
+    let done = match policy {
+        Some(policy) => {
+            sqlx::query(
+                "INSERT INTO update_policy (agent, scope, policy) VALUES (?, ?, ?) ON CONFLICT (agent, scope) DO UPDATE SET policy = excluded.policy",
+            )
+            .bind(agent_id)
+            .bind(scope)
+            .bind(policy)
+            .execute(pool())
+            .await
+        }
+        None => {
+            sqlx::query("DELETE FROM update_policy WHERE agent = ? AND scope = ?")
+                .bind(agent_id)
+                .bind(scope)
+                .execute(pool())
+                .await
+        }
+    };
+    done.is_ok()
 }
 
 pub async fn create_agent(
@@ -166,7 +222,7 @@ pub async fn create_agent(
     let secret = random_token(32);
     let created = now();
     sqlx::query(
-        "INSERT INTO agent (id, name, secret_hash, created, update_interval_secs, auto_update) VALUES (?, ?, ?, ?, ?, ?)",
+        "INSERT INTO agent (id, name, secret_hash, created, update_interval_secs, auto_update, default_policy) VALUES (?, ?, ?, ?, ?, ?, ?)",
     )
     .bind(&id)
     .bind(name)
@@ -174,6 +230,7 @@ pub async fn create_agent(
     .bind(created)
     .bind(config.update_interval_secs as i64)
     .bind(config.auto_update as i64)
+    .bind(config.policy_default())
     .execute(pool())
     .await
     .map_err(db_error)?;
@@ -201,6 +258,10 @@ pub async fn rotate_agent_token(id: &str) -> Option<String> {
 }
 
 pub async fn delete_agent(id: &str) -> bool {
+    let _ = sqlx::query("DELETE FROM update_policy WHERE agent = ?")
+        .bind(id)
+        .execute(pool())
+        .await;
     sqlx::query("DELETE FROM agent WHERE id = ?")
         .bind(id)
         .execute(pool())
@@ -211,11 +272,12 @@ pub async fn delete_agent(id: &str) -> bool {
 
 pub async fn set_agent_settings(id: &str, name: &str, config: &AgentConfig, address: Option<&str>) -> Option<AgentRecord> {
     sqlx::query(
-        "UPDATE agent SET name = ?, update_interval_secs = ?, auto_update = ?, address = ? WHERE id = ?",
+        "UPDATE agent SET name = ?, update_interval_secs = ?, auto_update = ?, default_policy = ?, address = ? WHERE id = ?",
     )
     .bind(name)
     .bind(config.update_interval_secs as i64)
     .bind(config.auto_update as i64)
+    .bind(config.policy_default())
     .bind(address)
     .bind(id)
     .execute(pool())
