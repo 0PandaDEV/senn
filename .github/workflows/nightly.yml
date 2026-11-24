@@ -1,0 +1,152 @@
+name: Nightly
+
+on:
+  schedule:
+    - cron: "0 2 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  packages: write
+  actions: read
+
+env:
+  NIGHTLY_KEEP: 30
+
+jobs:
+  check:
+    name: Check for changes
+    runs-on: ubuntu-24.04
+    outputs:
+      changed: ${{ steps.check.outputs.changed }}
+    steps:
+      - id: check
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" != "schedule" ]; then
+            echo "manual run, building"
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          LAST=$(gh api "repos/$REPO/actions/workflows/nightly.yml/runs?status=success&per_page=1" --jq '.workflow_runs[0].head_sha // ""')
+          if [ -z "$LAST" ]; then
+            echo "no previous nightly, building"
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if [ "$LAST" = "${{ github.sha }}" ]; then
+            echo "no commits since last nightly, skipping"
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if ! CMP=$(gh api "repos/$REPO/compare/${LAST}...${{ github.sha }}"); then
+            echo "compare failed, building"
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          STATUS=$(jq -r .status <<<"$CMP")
+          FILES=$(jq -r '.files[]?.filename' <<<"$CMP")
+          COUNT=$(printf '%s\n' "$FILES" | grep -c . || true)
+          CODE=$(printf '%s\n' "$FILES" | grep -vE '\.md$|^docs/|^\.github/' || true)
+          if [ "$STATUS" != "ahead" ] || [ "$COUNT" -ge 300 ] || [ -n "$CODE" ] || printf '%s\n' "$FILES" | grep -qE '^\.github/workflows/(nightly|publish)\.yml$'; then
+            echo "changes since $LAST, building"
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "only docs/ci changes since $LAST, skipping"
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  version:
+    name: Version
+    needs: check
+    if: needs.check.outputs.changed == 'true'
+    runs-on: ubuntu-24.04
+    outputs:
+      full: ${{ steps.version.outputs.full }}
+    steps:
+      - uses: actions/checkout@v5
+      - id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE=$(grep -m1 '^version = ' Cargo.toml | sed 's/version = "\(.*\)"/\1/')
+          FULL="${BASE}-nightly.$(date -u +%Y%m%d).${{ github.run_number }}"
+          echo "full=$FULL" >> "$GITHUB_OUTPUT"
+          echo "building $FULL"
+
+  build:
+    name: Build
+    needs: version
+    uses: ./.github/workflows/publish.yml
+    with:
+      version: ${{ needs.version.outputs.full }}
+    secrets: inherit
+
+  release:
+    name: Release
+    needs: [version, build]
+    runs-on: ubuntu-24.04
+    env:
+      TAG: v${{ needs.version.outputs.full }}
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - name: Find changelog base
+        id: base
+        shell: bash
+        run: |
+          set -euo pipefail
+          PREV=$(gh release list --limit 100 --json tagName,createdAt --jq '[.[] | select(.tagName | test("-nightly"))] | sort_by(.createdAt) | reverse | .[0].tagName // ""')
+          STABLE=$(gh release list --limit 100 --exclude-pre-releases --json tagName,createdAt --jq 'sort_by(.createdAt) | reverse | .[0].tagName // ""')
+          BASE=""
+          for ref in "$PREV" "$STABLE"; do
+            [ -n "$ref" ] || continue
+            BASE=$(gh api "repos/$GH_REPO/commits/$ref" --jq .sha 2>/dev/null || true)
+            [ -n "$BASE" ] && break
+          done
+          echo "sha=$BASE" >> "$GITHUB_OUTPUT"
+
+      - name: Changelog
+        id: changelog
+        uses: 0PandaDEV/changelog@main
+        with:
+          head: ${{ github.sha }}
+          base: ${{ steps.base.outputs.sha }}
+          step-summary: "true"
+
+      - uses: actions/download-artifact@v7
+        with:
+          pattern: dist-*
+          path: artifacts
+
+      - name: Collect agent binaries
+        run: |
+          mkdir release
+          for arch in amd64 arm64; do
+            cp "artifacts/dist-${arch}/senn-agent" "release/senn-agent-linux-${arch}"
+          done
+          cd release
+          sha256sum senn-agent-linux-* > checksums.txt
+
+      - name: Publish nightly release
+        shell: bash
+        env:
+          NOTES: ${{ steps.changelog.outputs.markdown }}
+        run: |
+          set -euo pipefail
+          gh release create "$TAG" --target "${{ github.sha }}" --prerelease --title "$TAG" --notes "$NOTES" release/*
+
+      - name: Prune old nightlies
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release list --limit 200 --json tagName,createdAt \
+            --jq '[.[] | select(.tagName | test("-nightly"))] | sort_by(.createdAt) | reverse | .[env.NIGHTLY_KEEP | tonumber:] | .[].tagName' \
+            | while read -r old; do
+                echo "deleting $old"
+                gh release delete "$old" --cleanup-tag --yes
+              done
