@@ -214,7 +214,13 @@ pub async fn networks(cx: &Cx) -> Result<impl View> {
                                                 </div>
                                             </td>
                                             <td class="muted">(if n.subnet.is_empty() { "—".to_string() } else { n.subnet.clone() })</td>
-                                            <td>used_by(names: n.used_by.clone())</td>
+                                            <td>
+                                                if n.builtin && n.used_by.is_empty() {
+                                                    <span class="pill idle"><i></i>"system"</span>
+                                                } else {
+                                                    used_by(names: n.used_by.clone())
+                                                }
+                                            </td>
                                             <td><div class="row-actions">
                                                 if !n.builtin {
                                                     api_button(url: format!("/api/hosts/{id}/resources/networks/remove"), label: "Remove network", glyph: Icon::Trash, tone: "danger", confirm: Some(format!("Remove network {}?", n.name)), body: Some(body(&n.id)))
