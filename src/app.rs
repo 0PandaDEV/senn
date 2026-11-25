@@ -65,11 +65,11 @@ const SCRIPTS: [&str; 22] = [
 pub fn meta(title: &'static str) -> Metadata {
     Metadata::new()
         .title(title)
-        .viewport("width=device-width, initial-scale=1")
+        .viewport("width=device-width, initial-scale=1, viewport-fit=cover")
         .theme_color("#0e0e0f")
 }
 
-#[layout("/", with(Metadata::new().title("Senn").viewport("width=device-width, initial-scale=1")))]
+#[layout("/", with(Metadata::new().title("Senn").viewport("width=device-width, initial-scale=1, viewport-fit=cover")))]
 async fn root(cx: &Cx, slot: Slot<'_>) -> Result<impl View> {
     let _ = try_context::<PageMeta>(cx);
     Ok(view! {

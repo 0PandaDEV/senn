@@ -90,9 +90,9 @@
   }
 }
 
-@keyframes busy-pulse {
+@keyframes busy-fade {
   50% {
-    background: color-mix(in srgb, var(--accent) 14%, transparent);
+    opacity: 0.55;
   }
 }
 
@@ -158,13 +158,13 @@
   td {
     max-width: 32ch;
     white-space: nowrap;
-    overflow: hidden;
+    overflow-x: clip;
     text-overflow: ellipsis;
   }
 
   .sub {
     max-width: 34ch;
-    overflow: hidden;
+    overflow-x: clip;
     text-overflow: ellipsis;
     white-space: nowrap;
     font-size: 0.75rem;
@@ -207,13 +207,20 @@
       display: flex;
       flex-wrap: wrap;
       align-items: center;
-      gap: var(--space-8) var(--space-12);
-      padding: var(--space-12) var(--space-16);
+      gap: var(--space-8) var(--space-16);
+      padding: var(--space-16) var(--space-16);
       border-bottom: 1px solid var(--border);
     }
 
     tbody tr:last-child {
       border-bottom: 0;
+      border-bottom-left-radius: calc(6px * var(--k) - 1px);
+      border-bottom-right-radius: calc(6px * var(--k) - 1px);
+    }
+
+    tbody tr:first-child {
+      border-top-left-radius: calc(6px * var(--k) - 1px);
+      border-top-right-radius: calc(6px * var(--k) - 1px);
     }
 
     tbody td,
@@ -292,16 +299,12 @@
     position: relative;
     cursor: pointer;
 
-    &[data-busy] {
-      background: color-mix(in srgb, var(--accent) 8%, transparent);
-      animation: busy-pulse 1.6s ease-in-out infinite;
-
-      > td:first-child {
-        box-shadow: inset 2px 0 0 var(--accent);
-      }
+    &[data-busy] > td:not(:has(.row-actions)) {
+      animation: busy-fade 1.6s ease-in-out infinite;
 
       @media (prefers-reduced-motion: reduce) {
         animation: none;
+        opacity: 0.7;
       }
     }
 
@@ -328,9 +331,6 @@
       z-index: 1;
     }
 
-    .row-actions {
-      margin-left: auto;
-    }
   }
 
 }
@@ -437,9 +437,9 @@
 
 .status {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
-  gap: var(--space-8);
+  gap: var(--space-4);
   min-width: 0;
 }
 
@@ -468,7 +468,7 @@
   b {
     font-weight: 400;
     color: var(--text-secondary);
-    overflow: hidden;
+    overflow-x: clip;
     text-overflow: ellipsis;
   }
 }
@@ -546,7 +546,9 @@ input[type="number"],
 input[type="password"],
 input:not([type]),
 select {
+  height: var(--control-h);
   min-height: var(--control-h);
+  padding-block: 0;
 }
 
 input[type="text"],
@@ -564,9 +566,16 @@ select {
   line-height: 14px;
   outline: none;
 
+  &:not(textarea) {
+    padding-block: 0;
+  }
+
+  &:hover {
+    border-color: color-mix(in srgb, var(--text) 25%, transparent);
+  }
+
   &:focus {
     border-color: var(--accent);
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 20%, transparent);
   }
 }
 
@@ -810,6 +819,11 @@ pre.code {
   position: relative;
   display: flex;
   gap: var(--space-8);
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
+  overscroll-behavior-x: contain;
 
   &:has(.indicator) button.active {
     background: none;
@@ -825,6 +839,8 @@ pre.code {
   button {
     position: relative;
     z-index: 1;
+    flex: none;
+    white-space: nowrap;
     min-height: var(--control-h);
     padding: var(--pad-tab);
     line-height: 16px;
@@ -852,7 +868,7 @@ pre.code {
   font-size: 0.71875rem;
   color: var(--text-muted);
   white-space: nowrap;
-  overflow: hidden;
+  overflow-x: clip;
   text-overflow: ellipsis;
 }
 
@@ -860,7 +876,7 @@ pre.code {
   min-width: 0;
   color: var(--text-muted);
   white-space: nowrap;
-  overflow: hidden;
+  overflow-x: clip;
   text-overflow: ellipsis;
 }
 
@@ -1284,7 +1300,7 @@ pre.code {
   }
 
   .select-button {
-    margin-left: calc(-1 * (var(--space-8) + 1px));
+    translate: calc(-1 * (var(--space-8) + 1px)) 0;
   }
 }
 
@@ -1309,7 +1325,7 @@ select[data-select]:not([data-enhanced]) {
     width: 100%;
     min-width: 0;
     min-height: var(--control-h);
-    padding: 0 var(--space-8) 0 var(--space-12);
+    padding: 0 var(--space-8);
     border: 1px solid var(--border-hover);
     border-radius: calc(6px * var(--k));
     background: var(--background);
@@ -1344,7 +1360,7 @@ select[data-select]:not([data-enhanced]) {
   .select-label {
     flex: 1;
     min-width: 0;
-    overflow: hidden;
+    overflow-x: clip;
     text-overflow: ellipsis;
     white-space: nowrap;
     text-align: left;
@@ -1381,7 +1397,7 @@ select[data-select]:not([data-enhanced]) {
     color: var(--text);
     overflow-x: hidden;
     display: grid;
-    gap: 2px;
+    gap: var(--space-4);
     min-width: 100%;
     max-width: min(360px, calc(100vw - 2 * var(--space-16)));
     max-height: 320px;
@@ -1398,7 +1414,7 @@ select[data-select]:not([data-enhanced]) {
   }
 
   .select-group {
-    padding: var(--space-8) var(--space-12) var(--space-4);
+    padding: var(--space-8) var(--space-8) var(--space-4);
     font-size: 0.6875rem;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -1409,12 +1425,12 @@ select[data-select]:not([data-enhanced]) {
     display: flex;
     align-items: center;
     min-height: var(--control-h);
-    padding: var(--pad-tab);
+    padding: var(--space-8);
     line-height: 16px;
     border-radius: calc(6px * var(--k));
     color: var(--text-secondary);
     white-space: nowrap;
-    overflow: hidden;
+    overflow-x: clip;
     text-overflow: ellipsis;
     cursor: pointer;
     transition: var(--hover-transition);

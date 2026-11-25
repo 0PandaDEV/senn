@@ -13,8 +13,8 @@ pub async fn setup(cx: &Cx) -> Result<impl View> {
         <div class="login">
             <form class="login-card" data-api="/api/auth/setup" data-redirect="/">
                 <div class="login-brand">
-                    <svg width="28" height="28" viewBox="0 0 32 32" aria-hidden="true"><path d="M6 24 13 9l4 8 3-5 6 12z" fill="currentColor"></path></svg>
-                    <h1>"senn"</h1>
+                    <img class="brand-logo" src="/logo.svg" width="34" height="28" alt="">
+                    <h1>"Senn"</h1>
                 </div>
                 <p class="muted">"Create the account for this instance. It is the only one, there is no user management."</p>
                 <label class="field">

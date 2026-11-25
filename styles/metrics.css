@@ -32,7 +32,7 @@
 
     @media (max-width: 860px) {
       --reach: var(--space-8);
-      top: calc(var(--space-8) * 2 + var(--topbar-h));
+      top: calc(var(--space-8) * 2 + var(--topbar-h) + var(--safe-t));
     }
   }
 
