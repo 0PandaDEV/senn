@@ -48,15 +48,14 @@ pub async fn stack(cx: &Cx) -> Result<impl View> {
         shell(section: "host", host: id.as_str(), tab: "stacks",
             <div data-agent=(id.clone())>
                 host_head(host: &host)
-                <div class="crumbs">
-                    <a (nav(cx, format!("/hosts/{id}/stacks")))>"Stacks"</a>
-                    icon(name: Icon::Chevron, size: 14)
-                    <strong>(name.clone())</strong>
-                </div>
                 <div data-live="toolbar">
                 <div class="toolbar">
                     <div class="inline">
-                        <h2>(name.clone())</h2>
+                        <h2 class="crumbs">
+                            <a (nav(cx, format!("/hosts/{id}/stacks")))>"Stacks"</a>
+                            icon(name: Icon::Chevron, size: 14)
+                            <strong>(name.clone())</strong>
+                        </h2>
                         if total > 0 {
                             <span class=(format!("pill {}", if running == total { "ok" } else if running == 0 { "bad" } else { "warn" }))><i></i>(running) "/" (total) " running"</span>
                         } else {
@@ -88,6 +87,7 @@ pub async fn stack(cx: &Cx) -> Result<impl View> {
                 <div class="tabbar" data-tabs="">
                     <button type="button" class="active" data-tab="services">"Services"</button>
                     <button type="button" data-tab="edit">"Edit"</button>
+                    <button type="button" data-tab="files">"Files"</button>
                     <button type="button" data-tab="metrics">"Metrics"</button>
                     <button type="button" data-tab="logs">"Logs"</button>
                 </div>
@@ -111,7 +111,7 @@ pub async fn stack(cx: &Cx) -> Result<impl View> {
                                                 }
                                                 (svc.clone())
                                             </a>
-                                            <div class="sub" title=(format!("{} · {} · update policy {}", c.name, c.image, c.update_policy))>(c.image.clone())</div>
+                                            <div class="sub" title=(format!("{} · {} · update policy {}", c.name, c.image, c.update_policy)) data-mid="">(c.image.clone())</div>
                                         </td>
                                         <td>state_pill(state: &c.state, health: c.health.as_deref())</td>
                                         <td>usage(u: Usage::of(&c))</td>
@@ -134,16 +134,10 @@ pub async fn stack(cx: &Cx) -> Result<impl View> {
                 </div>
                 </section>
                 <section data-pane="edit" hidden=(true)>
-                    <div class="edit-stack">
-                        <div class="edit-block">
-                            <h3>"Environment"</h3>
-                            <div data-env="" data-agent=(id.clone()) data-stack=(name.clone()) data-dir=(host.stack_dir(&name)) data-compose=(info.as_ref().map(|i| i.file.clone()).unwrap_or_default())></div>
-                        </div>
-                        <div class="edit-block">
-                            <h3>"Files"</h3>
-                            <div data-files="" data-agent=(id.clone()) data-root=(name.clone()) data-abs=(host.stacks_dir())></div>
-                        </div>
-                    </div>
+                    <div data-env="" data-agent=(id.clone()) data-stack=(name.clone()) data-dir=(host.stack_dir(&name)) data-compose=(info.as_ref().map(|i| i.file.clone()).unwrap_or_default())></div>
+                </section>
+                <section data-pane="files" hidden=(true)>
+                    <div data-files="" data-agent=(id.clone()) data-root=(name.clone()) data-abs=(host.stacks_dir())></div>
                 </section>
                 <section data-pane="metrics" hidden=(true)>
                     metrics_panel(kind: "stack", host: id.as_str(), name: name.as_str())

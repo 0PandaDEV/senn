@@ -20,7 +20,7 @@ function select(bar: HTMLElement, name: string) {
   for (const b of bar.querySelectorAll<HTMLElement>("[data-tab]")) b.classList.toggle("active", b.dataset.tab === name);
   const scope = bar.parentElement;
   if (!scope) return;
-  for (const pane of scope.querySelectorAll<HTMLElement>("[data-pane]")) pane.hidden = pane.dataset.pane !== name;
+  for (const pane of scope.querySelectorAll<HTMLElement>(":scope > [data-pane]")) pane.hidden = pane.dataset.pane !== name;
   document.dispatchEvent(new CustomEvent("senn:tab", { detail: name }));
 }
 
@@ -29,12 +29,13 @@ document.addEventListener("click", (event) => {
   const bar = tab?.closest<HTMLElement>("[data-tabs]");
   if (!tab || !bar) return;
   select(bar, tab.dataset.tab!);
+  if (bar.hasAttribute("data-sub")) return;
   remember(tab.dataset.tab!);
   history.replaceState(null, "", `#${tab.dataset.tab}`);
 });
 
 function restore() {
-  const bar = document.querySelector<HTMLElement>("[data-tabs]");
+  const bar = document.querySelector<HTMLElement>("[data-tabs]:not([data-sub])");
   if (!bar) return;
   const wanted = location.hash.slice(1) || stored();
   if (!wanted || !bar.querySelector(`[data-tab="${wanted}"]`)) return;

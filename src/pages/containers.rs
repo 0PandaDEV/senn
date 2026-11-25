@@ -115,15 +115,14 @@ pub async fn container(cx: &Cx) -> Result<impl View> {
         shell(section: "host", host: id.as_str(), tab: "containers",
             <div data-agent=(id.clone())>
                 host_head(host: &host)
-                <div class="crumbs">
-                    <a (nav(cx, format!("/hosts/{id}/containers")))>"Containers"</a>
-                    icon(name: Icon::Chevron, size: 14)
-                    <strong>(found.as_ref().map(|c| c.name.clone()).unwrap_or_else(|| cid.clone()))</strong>
-                </div>
                 if let Some(c) = found.clone() {
                     <div class="toolbar">
                         <div class="inline">
-                            <h2>(c.name.clone())</h2>
+                            <h2 class="crumbs">
+                                <a (nav(cx, format!("/hosts/{id}/containers")))>"Containers"</a>
+                                icon(name: Icon::Chevron, size: 14)
+                                <strong>(c.name.clone())</strong>
+                            </h2>
                             state_pill(state: &c.state, health: c.health.as_deref())
                             <span class="muted">(c.image.clone())</span>
                         </div>
@@ -143,6 +142,13 @@ pub async fn container(cx: &Cx) -> Result<impl View> {
                     <section data-pane="logs" hidden=(true)>
                         <div data-logs=(format!("/api/hosts/{id}/logs?container={}", c.id))></div>
                     </section>
+                } else {
+                    <h2 class="crumbs">
+                        <a (nav(cx, format!("/hosts/{id}/containers")))>"Containers"</a>
+                        icon(name: Icon::Chevron, size: 14)
+                        <strong>(cid.clone())</strong>
+                    </h2>
+                    <section class="empty small"><p>"This container no longer exists on the host."</p></section>
                 }
             </div>
         )
