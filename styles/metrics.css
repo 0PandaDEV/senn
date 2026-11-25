@@ -197,7 +197,9 @@
     position: absolute;
     z-index: 2;
     display: grid;
-    gap: var(--space-4);
+    grid-template-columns: auto minmax(0, 1fr) minmax(var(--tip-v, 0px), auto);
+    align-items: center;
+    gap: var(--space-4) var(--space-8);
     padding: var(--space-8) var(--space-16);
     background: var(--background);
     border: 1px solid var(--border-hover);
@@ -206,16 +208,19 @@
     font-size: 0.6875rem;
     pointer-events: none;
     white-space: nowrap;
+
+    &.banded {
+      grid-template-columns: auto minmax(0, 1fr) minmax(var(--tip-v, 0px), auto) minmax(var(--tip-b, 0px), auto);
+    }
   }
 
   .chart-tip-time {
+    grid-column: 1 / -1;
     color: var(--text-muted);
   }
 
   .chart-tip-row {
-    display: flex;
-    align-items: center;
-    gap: var(--space-8);
+    display: contents;
 
     i {
       width: 8px;
@@ -231,18 +236,17 @@
       text-overflow: ellipsis;
     }
 
-    span {
-      flex: 1;
-    }
-
     b {
       padding-left: var(--space-16);
       font-weight: 500;
       font-variant-numeric: tabular-nums;
+      text-align: right;
     }
 
     small {
       color: var(--text-muted);
+      font-variant-numeric: tabular-nums;
+      text-align: right;
     }
   }
 }

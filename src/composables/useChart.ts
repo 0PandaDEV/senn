@@ -147,7 +147,10 @@ export class Chart {
   private resort = true;
   private local = false;
   private tipHead: HTMLElement | null = null;
-  private tipRows = new Map<string, { value: HTMLElement; band: HTMLElement | null }>();
+  private tipRows = new Map<string, { row: HTMLElement; value: HTMLElement; band: HTMLElement | null }>();
+  private tipOrder = "";
+  private tipV = 0;
+  private tipB = 0;
   private tipKey = "";
   private tipW = 0;
   private tipH = 0;
@@ -601,9 +604,13 @@ export class Chart {
   private resetTip() {
     this.tipW = 0;
     this.tipH = 0;
+    this.tipV = 0;
+    this.tipB = 0;
     this.tipSide = "r";
     this.tip.style.minWidth = "";
     this.tip.style.minHeight = "";
+    this.tip.style.removeProperty("--tip-v");
+    this.tip.style.removeProperty("--tip-b");
     this.tip.hidden = true;
   }
 
@@ -617,10 +624,16 @@ export class Chart {
     const key = `${banded}:${visible.map((l) => l.id).join("|")}`;
     if (key !== this.tipKey || !this.tipHead) {
       this.tipKey = key;
+      this.tipOrder = "";
       this.tipW = 0;
       this.tipH = 0;
+      this.tipV = 0;
+      this.tipB = 0;
       this.tip.style.minWidth = "";
       this.tip.style.minHeight = "";
+      this.tip.style.removeProperty("--tip-v");
+      this.tip.style.removeProperty("--tip-b");
+      this.tip.classList.toggle("banded", banded);
       const head = document.createElement("div");
       head.className = "chart-tip-time";
       this.tipHead = head;
@@ -640,13 +653,22 @@ export class Chart {
           band = document.createElement("small");
           row.append(band);
         }
-        this.tipRows.set(line.id, { value, band });
+        this.tipRows.set(line.id, { row, value, band });
         nodes.push(row);
       }
       this.tip.replaceChildren(...nodes);
     }
     const data = new Map(rows.map((r) => [r.line.id, r.p]));
     this.tipHead.textContent = formatTime(rows[0]?.p[0] || t);
+    const ordered = visible
+      .map((line, i) => ({ line, i, v: data.get(line.id)?.[1] ?? -Infinity }))
+      .sort((a, b) => b.v - a.v || a.i - b.i)
+      .map((e) => e.line);
+    const order = ordered.map((l) => l.id).join("|");
+    if (order !== this.tipOrder) {
+      this.tipOrder = order;
+      this.tip.append(...ordered.map((l) => this.tipRows.get(l.id)!.row));
+    }
     for (const line of visible) {
       const cell = this.tipRows.get(line.id);
       if (!cell) continue;
@@ -655,6 +677,20 @@ export class Chart {
       if (cell.band) cell.band.textContent = p ? `${formatValue(p[2], this.unit)} – ${formatValue(p[3], this.unit)}` : "";
     }
     this.tip.hidden = false;
+    let v = this.tipV;
+    let bw = this.tipB;
+    for (const cell of this.tipRows.values()) {
+      v = Math.max(v, cell.value.offsetWidth);
+      if (cell.band) bw = Math.max(bw, cell.band.offsetWidth);
+    }
+    if (v > this.tipV) {
+      this.tipV = v;
+      this.tip.style.setProperty("--tip-v", `${v}px`);
+    }
+    if (bw > this.tipB) {
+      this.tipB = bw;
+      this.tip.style.setProperty("--tip-b", `${bw}px`);
+    }
     const width = this.tip.offsetWidth;
     const height = this.tip.offsetHeight;
     if (width > this.tipW) {
