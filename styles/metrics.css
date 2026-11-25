@@ -1,5 +1,6 @@
 .metrics {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-16);
   min-width: 0;
 
@@ -379,6 +380,7 @@
   .tp-abs,
   .tp-quick {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     align-content: start;
     gap: var(--space-16);
     min-width: 0;
@@ -459,7 +461,19 @@
 
   .tp-recent {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: var(--space-4);
+
+    h4 {
+      margin-bottom: var(--space-4);
+    }
+
+    .tp-item {
+      display: block;
+      margin-inline: calc(-1 * var(--space-16));
+      width: auto;
+      font-variant-numeric: tabular-nums;
+    }
 
     &:empty {
       display: none;
@@ -482,10 +496,11 @@
     align-content: start;
     gap: var(--space-4);
     overflow-y: auto;
-    }
+  }
 
   .tp-item {
     display: flex;
+    min-width: 0;
     align-items: center;
     justify-content: space-between;
     gap: var(--space-8);
