@@ -882,11 +882,14 @@ pre.code {
   }
 
   .env-path {
-    flex: 1;
+    flex: 0 1 auto;
     min-width: 0;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+
+    code {
+      display: block;
+      white-space: nowrap;
+      overflow-x: clip;
+    }
   }
 
   .env-actions {

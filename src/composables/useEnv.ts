@@ -83,19 +83,19 @@ function mount(el: HTMLElement) {
   el.classList.add("env");
   el.innerHTML = `
     <div class="env-head">
-      <div class="env-path"><code>${escapeHtml(dir)}/.env</code></div>
+      <div class="env-path"><code data-mid>${escapeHtml(dir)}/.env</code></div>
       <div class="env-actions">
         <button type="button" class="button" data-env-add>Add variable</button>
         <button type="button" class="button" data-env-save disabled>Save</button>
-        <button type="button" class="button primary" data-env-apply disabled>Save and apply</button>
+        <button type="button" class="button primary" data-env-apply title="Save unsaved changes and run compose up">Redeploy</button>
       </div>
     </div>
     <div class="env-missing" hidden></div>
     <div class="env-split">
       <div class="env-file">
         <div class="env-file-head">
-          <select class="env-file-pick" data-select="env-file-select" aria-label="File"></select>
-          <span class="files-dirty" hidden>modified</span>
+          <select class="env-file-pick" data-select="env-file-select" data-mid-label aria-label="File"></select>
+          <span class="files-dirty" title="Unsaved changes" aria-label="Unsaved changes" hidden></span>
           <button type="button" class="button" data-env-file-save disabled>Save file</button>
         </div>
         <div class="env-editor"></div>
@@ -117,7 +117,6 @@ function mount(el: HTMLElement) {
   const setDirty = (value: boolean) => {
     dirty = value;
     save.disabled = !value;
-    apply.disabled = !value;
   };
 
   const setFileDirty = (value: boolean) => {
@@ -280,17 +279,19 @@ function mount(el: HTMLElement) {
     }
   }
 
-  async function saveFile() {
-    if (!current || !fileDirty) return;
+  async function saveFile(): Promise<boolean> {
+    if (!current || !fileDirty) return true;
     fileSave.disabled = true;
     try {
       const saved = await post(`${stack}/${current}`, editor.value, current === composeName);
       setFileDirty(false);
       window.toast(`Saved ${saved ?? current}`, "success");
       void window.revalidate();
+      return true;
     } catch (e) {
       window.toast((e as Error).message);
       fileSave.disabled = false;
+      return false;
     }
   }
 
@@ -362,7 +363,9 @@ function mount(el: HTMLElement) {
     if (t.closest("[data-env-file-save]")) void saveFile();
     if (t.closest("[data-env-save]")) void persist();
     if (t.closest("[data-env-apply]")) {
-      if (await persist()) void window.runJob(`/api/hosts/${agent}/stacks/${encodeURIComponent(stack)}/up`, `${stack} · apply environment`);
+      if (!(await saveFile())) return;
+      if (dirty && !(await persist())) return;
+      void window.runJob(`/api/hosts/${agent}/stacks/${encodeURIComponent(stack)}/up`, `${stack} · redeploy`);
     }
   });
 
