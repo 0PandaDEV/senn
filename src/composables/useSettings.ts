@@ -1,38 +1,23 @@
 import { icon } from "./useIcons.js";
 import { apiError, escapeHtml } from "./useStream.js";
 
-const SERVICES: Record<string, string> = {
-  ntfy: "ntfy",
-  ntfys: "ntfy",
-  discord: "Discord",
-  tgram: "Telegram",
-  slack: "Slack",
-  gotify: "Gotify",
-  gotifys: "Gotify",
-  pover: "Pushover",
-  mmost: "Mattermost",
-  mmosts: "Mattermost",
-  pbul: "Pushbullet",
-  json: "Webhook",
-  jsons: "Webhook",
-};
-
-function service(url: string): string {
+function service(url: string, services: Record<string, string>): string {
   const scheme = url.trim().split("://")[0]?.toLowerCase() ?? "";
   if (!url.includes("://")) return url.trim() ? "?" : "";
-  return SERVICES[scheme] ?? "unknown";
+  return services[scheme] ?? "unknown";
 }
 
 function mount(form: HTMLFormElement) {
   form.dataset.bound = "1";
   const hidden = form.querySelector<HTMLInputElement>('input[name="targets"]')!;
   const list = form.querySelector<HTMLElement>("[data-targets]")!;
+  const services: Record<string, string> = JSON.parse(form.dataset.services || "{}");
 
   const row = (value: string) => {
-    const name = service(value);
+    const name = service(value, services);
     return `<div class="target">
       <span class="target-service${name === "unknown" || name === "?" ? " bad" : ""}">${escapeHtml(name || "new")}</span>
-      <input class="target-url" value="${escapeHtml(value)}" placeholder="ntfys://my-topic" spellcheck="false" autocomplete="off">
+      <input class="target-url" value="${escapeHtml(value)}" placeholder="barks://api.day.app/device_key" spellcheck="false" autocomplete="off">
       <button type="button" class="button icon-only ghost danger" data-target-remove title="Remove" aria-label="Remove">${icon("trash")}</button>
     </div>`;
   };
@@ -53,7 +38,7 @@ function mount(form: HTMLFormElement) {
     const input = (event.target as HTMLElement).closest<HTMLInputElement>(".target-url");
     if (!input) return;
     const badge = input.parentElement!.querySelector<HTMLElement>(".target-service")!;
-    const name = service(input.value);
+    const name = service(input.value, services);
     badge.textContent = name || "new";
     badge.classList.toggle("bad", name === "unknown" || name === "?");
     sync();

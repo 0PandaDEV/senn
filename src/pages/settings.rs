@@ -61,6 +61,13 @@ const EVENTS: [(&str, &str, &str); 8] = [
 #[page("/settings", with(meta("Settings · Senn")), with(PageMeta { public: false }))]
 pub async fn settings(cx: &Cx) -> Result<impl View> {
     let cfg = notify::current();
+    let services = serde_json::to_string(
+        &notify::SERVICES
+            .iter()
+            .flat_map(|s| s.schemes.iter().map(move |k| (*k, s.name)))
+            .collect::<std::collections::HashMap<_, _>>(),
+    )
+    .unwrap_or_default();
     let me = state::profile().await;
     let on = |key: &str| match key {
         "agent_offline" => cfg.agent_offline,
@@ -133,7 +140,7 @@ pub async fn settings(cx: &Cx) -> Result<impl View> {
                     </form>
                     </div>
                 </section></div>
-                <form id="settings-form" class="settings" data-api="/api/settings/notify" data-success="Notification settings saved" data-settings="">
+                <form id="settings-form" class="settings" data-api="/api/settings/notify" data-success="Notification settings saved" data-settings="" data-services=(services)>
                     <section class="settings-card">
                         <header class="settings-head">
                             <div>
@@ -161,11 +168,11 @@ pub async fn settings(cx: &Cx) -> Result<impl View> {
                         <details class="formats">
                             <summary>"Supported services and URL formats"</summary>
                             <dl>
-                                for (name, example) in notify::SCHEMES.iter() {
-                                    <dt>(*name)</dt>
+                                for svc in notify::SERVICES.iter() {
+                                    <dt>(svc.name)</dt>
                                     <dd>
-                                        for part in example.split(" · ") {
-                                            <code>(part.to_string())</code>
+                                        for part in svc.formats.iter() {
+                                            <code>(*part)</code>
                                         }
                                     </dd>
                                 }

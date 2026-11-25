@@ -10,6 +10,9 @@ use tokio::sync::broadcast::error::RecvError;
 
 use super::{config::config, hub, jobs, state};
 
+mod services;
+mod target;
+
 const KEY: &str = "notify";
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -72,12 +75,39 @@ pub async fn save(cfg: NotifyConfig) -> bool {
     ok
 }
 
+#[derive(Debug, Clone)]
 pub struct Message {
     pub title: String,
     pub body: String,
     pub priority: u8,
     pub tags: &'static str,
     pub click: Option<String>,
+}
+
+impl Message {
+    pub fn text(&self) -> String {
+        match &self.click {
+            Some(c) => format!("{}\n{c}", self.body),
+            None => self.body.clone(),
+        }
+    }
+
+    pub fn full(&self) -> String {
+        format!("{}\n{}", self.title, self.text())
+    }
+
+    pub fn icon(&self) -> Option<String> {
+        link("/icon.png")
+    }
+
+    pub fn kind(&self) -> &'static str {
+        match self.tags {
+            "white_check_mark" | "green_circle" => "success",
+            "warning" => "warning",
+            _ if self.priority >= 4 => "failure",
+            _ => "info",
+        }
+    }
 }
 
 impl NotifyConfig {
@@ -109,235 +139,11 @@ impl NotifyConfig {
     }
 }
 
-pub const SCHEMES: &[(&str, &str)] = &[
-    (
-        "ntfy",
-        "ntfys://topic · ntfys://host/topic?token=tk_… · ntfy://host/topic for http",
-    ),
-    ("Discord", "discord://webhook_id/webhook_token"),
-    ("Telegram", "tgram://bot_token/chat_id"),
-    ("Slack", "slack://TokenA/TokenB/TokenC"),
-    ("Gotify", "gotifys://host/app_token"),
-    ("Pushover", "pover://user_key@app_token"),
-    ("Mattermost", "mmosts://host/hook_id"),
-    ("Pushbullet", "pbul://access_token"),
-    ("Webhook (JSON)", "jsons://host/path · json:// for http"),
-];
-
-struct Target {
-    scheme: String,
-    user: Option<String>,
-    pass: Option<String>,
-    host: String,
-    path: Vec<String>,
-    query: HashMap<String, String>,
-}
-
-fn parse(raw: &str) -> Result<Target, String> {
-    let (scheme, rest) = raw
-        .split_once("://")
-        .ok_or_else(|| format!("not a notification URL: {raw}"))?;
-    let (rest, query) = match rest.split_once('?') {
-        Some((r, q)) => (r, q),
-        None => (rest, ""),
-    };
-    let query = query
-        .split('&')
-        .filter_map(|kv| kv.split_once('='))
-        .map(|(k, v)| (k.to_lowercase(), v.to_string()))
-        .collect();
-    let (auth, rest) = match rest.rsplit_once('@') {
-        Some((a, r)) => (Some(a), r),
-        None => (None, rest),
-    };
-    let (user, pass) = match auth.map(|a| a.split_once(':')) {
-        Some(Some((u, p))) => (Some(u.to_string()), Some(p.to_string())),
-        Some(None) => (auth.map(String::from), None),
-        None => (None, None),
-    };
-    let mut parts = rest.split('/').filter(|p| !p.is_empty()).map(String::from);
-    let host = parts.next().unwrap_or_default();
-    Ok(Target {
-        scheme: scheme.to_lowercase(),
-        user,
-        pass,
-        host,
-        path: parts.collect(),
-        query,
-    })
-}
-
-fn client() -> reqwest::Client {
-    reqwest::Client::builder()
-        .timeout(Duration::from_secs(15))
-        .build()
-        .unwrap_or_default()
-}
-
-fn text(msg: &Message) -> String {
-    match &msg.click {
-        Some(c) => format!("{}\n{c}", msg.body),
-        None => msg.body.clone(),
-    }
-}
-
-async fn check(res: Result<reqwest::Response, reqwest::Error>, name: &str) -> Result<(), String> {
-    let res = res.map_err(|e| format!("{name}: {e}"))?;
-    if res.status().is_success() {
-        return Ok(());
-    }
-    let status = res.status();
-    let body = res.text().await.unwrap_or_default();
-    Err(format!(
-        "{name} answered {status}: {}",
-        body.chars().take(160).collect::<String>()
-    ))
-}
-
-async fn deliver(raw: &str, msg: &Message) -> Result<(), String> {
-    let t = parse(raw)?;
-    let http = |secure: bool| if secure { "https" } else { "http" };
-    let first = || t.path.first().cloned().unwrap_or_default();
-    match t.scheme.as_str() {
-        "ntfy" | "ntfys" => {
-            let (base, topic) = if t.path.is_empty() {
-                ("https://ntfy.sh".to_string(), t.host.clone())
-            } else {
-                (
-                    format!("{}://{}", http(t.scheme == "ntfys"), t.host),
-                    t.path.join("/"),
-                )
-            };
-            let mut req = client()
-                .post(format!("{base}/{topic}"))
-                .header("Title", msg.title.clone())
-                .header("Priority", msg.priority.to_string())
-                .header("Tags", msg.tags)
-                .body(msg.body.clone());
-            if let Some(c) = &msg.click {
-                req = req.header("Click", c.clone());
-            }
-            if let Some(token) = t.query.get("token") {
-                req = req.bearer_auth(token);
-            } else if let (Some(u), Some(p)) = (&t.user, &t.pass) {
-                req = req.basic_auth(u, Some(p));
-            }
-            check(req.send().await, "ntfy").await
-        }
-        "discord" => {
-            let url = format!("https://discord.com/api/webhooks/{}/{}", t.host, first());
-            let body = serde_json::json!({ "embeds": [{ "title": msg.title, "description": text(msg), "color": if msg.priority >= 4 { 0xe5484d } else { 0x46c27f } }] });
-            check(client().post(url).json(&body).send().await, "discord").await
-        }
-        "tgram" => {
-            let mut last = Ok(());
-            for chat in &t.path {
-                let body = serde_json::json!({ "chat_id": chat, "text": format!("{}\n{}", msg.title, text(msg)), "disable_web_page_preview": true });
-                last = check(
-                    client()
-                        .post(format!(
-                            "https://api.telegram.org/bot{}/sendMessage",
-                            t.host
-                        ))
-                        .json(&body)
-                        .send()
-                        .await,
-                    "telegram",
-                )
-                .await;
-                last.clone()?;
-            }
-            last
-        }
-        "slack" => {
-            let url = format!(
-                "https://hooks.slack.com/services/{}/{}",
-                t.host,
-                t.path.join("/")
-            );
-            let body = serde_json::json!({ "text": format!("*{}*\n{}", msg.title, text(msg)) });
-            check(client().post(url).json(&body).send().await, "slack").await
-        }
-        "gotify" | "gotifys" => {
-            let token = t.path.last().cloned().unwrap_or_default();
-            let prefix = t.path[..t.path.len().saturating_sub(1)].join("/");
-            let base = if prefix.is_empty() {
-                t.host.clone()
-            } else {
-                format!("{}/{prefix}", t.host)
-            };
-            let url = format!(
-                "{}://{base}/message?token={token}",
-                http(t.scheme == "gotifys")
-            );
-            let body = serde_json::json!({ "title": msg.title, "message": text(msg), "priority": msg.priority as u32 * 2 });
-            check(client().post(url).json(&body).send().await, "gotify").await
-        }
-        "pover" => {
-            let user = t.user.clone().unwrap_or_default();
-            let body = serde_json::json!({
-                "token": t.host,
-                "user": user,
-                "title": msg.title,
-                "message": msg.body,
-                "priority": (msg.priority as i32 - 3).clamp(-1, 1),
-                "url": msg.click,
-            });
-            check(
-                client()
-                    .post("https://api.pushover.net/1/messages.json")
-                    .json(&body)
-                    .send()
-                    .await,
-                "pushover",
-            )
-            .await
-        }
-        "mmost" | "mmosts" => {
-            let url = format!(
-                "{}://{}/hooks/{}",
-                http(t.scheme == "mmosts"),
-                t.host,
-                t.path.join("/")
-            );
-            let body = serde_json::json!({ "text": format!("**{}**\n{}", msg.title, text(msg)) });
-            check(client().post(url).json(&body).send().await, "mattermost").await
-        }
-        "pbul" => {
-            let body = serde_json::json!({ "type": "note", "title": msg.title, "body": text(msg) });
-            check(
-                client()
-                    .post("https://api.pushbullet.com/v2/pushes")
-                    .header("Access-Token", t.host.clone())
-                    .json(&body)
-                    .send()
-                    .await,
-                "pushbullet",
-            )
-            .await
-        }
-        "json" | "jsons" => {
-            let url = format!(
-                "{}://{}/{}",
-                http(t.scheme == "jsons"),
-                t.host,
-                t.path.join("/")
-            );
-            let kind = if msg.priority >= 4 { "failure" } else { "info" };
-            let body = serde_json::json!({ "title": msg.title, "message": msg.body, "type": kind, "url": msg.click });
-            let mut req = client().post(url).json(&body);
-            if let (Some(u), p) = (&t.user, &t.pass) {
-                req = req.basic_auth(u, p.as_ref());
-            }
-            check(req.send().await, "webhook").await
-        }
-        other => Err(format!("unsupported notification service: {other}://")),
-    }
-}
+pub use services::SERVICES;
 
 pub fn validate(raw: &str) -> Result<(), String> {
-    let t = parse(raw)?;
-    if !SCHEMES_KEYS.contains(&t.scheme.as_str()) {
+    let t = target::parse(raw)?;
+    if services::find(&t.scheme).is_none() {
         return Err(format!("unsupported notification service: {}://", t.scheme));
     }
     if t.host.is_empty() {
@@ -346,10 +152,9 @@ pub fn validate(raw: &str) -> Result<(), String> {
     Ok(())
 }
 
-const SCHEMES_KEYS: &[&str] = &[
-    "ntfy", "ntfys", "discord", "tgram", "slack", "gotify", "gotifys", "pover", "mmost", "mmosts",
-    "pbul", "json", "jsons",
-];
+async fn deliver(raw: &str, msg: &Message) -> Result<(), String> {
+    services::deliver(target::parse(raw)?, msg.clone()).await
+}
 
 pub async fn send(cfg: &NotifyConfig, msg: Message) -> Result<(), String> {
     let urls = cfg.urls();
