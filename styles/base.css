@@ -110,6 +110,8 @@
 
 
 html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
   scrollbar-gutter: stable;
   scrollbar-color: color-mix(in srgb, var(--accent) 65%, transparent) transparent;
 }
@@ -319,6 +321,6 @@ select {
   input:not([type="checkbox"], [type="radio"]),
   textarea,
   select {
-    font-size: 16px;
+    font-size: 16px !important;
   }
 }

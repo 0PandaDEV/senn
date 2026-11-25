@@ -1023,6 +1023,11 @@ pre.code {
 
     .editor {
       flex: 1;
+
+      .editor-highlight,
+      .editor-input {
+        padding-bottom: calc(var(--space-16) + var(--fit-pad, 0px));
+      }
     }
   }
 }
@@ -1470,6 +1475,7 @@ select[data-select]:not([data-enhanced]) {
     max-height: var(--fit-h, 70vh);
     overflow-y: auto;
     padding: var(--space-4);
+    padding-bottom: calc(var(--space-4) + var(--fit-pad, 0px));
     background: var(--element);
     border: 1px solid var(--border);
     border-radius: calc(6px * var(--k) + var(--space-4) + 1px);

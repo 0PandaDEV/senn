@@ -20,6 +20,22 @@
     pointer-events: none;
   }
 
+  .edge {
+    display: none;
+
+    @media (max-width: 860px) {
+      display: block;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 39;
+      height: calc(var(--space-8) + var(--safe-t) + var(--topbar-h));
+      background: var(--background);
+      pointer-events: none;
+    }
+  }
+
   @media (max-width: 860px) {
     grid-template-columns: minmax(0, 1fr);
     align-content: start;
@@ -37,7 +53,7 @@
       gap: var(--space-8);
       height: var(--topbar-h);
       padding: var(--space-8);
-      background: var(--element);
+      background: linear-gradient(var(--element), var(--element)) var(--background);
       border: 1px solid var(--border);
       border-radius: calc(6px * var(--k));
 

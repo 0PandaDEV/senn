@@ -60,6 +60,7 @@ pub async fn shell(
     ];
     Ok(view! {
         <div class="shell">
+            <div class="edge" aria-hidden="true"></div>
             <header class="topbar">
                 <button type="button" class="menu" data-menu="" aria-label="Menu">
                     icon(name: Icon::Menu)
