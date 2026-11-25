@@ -1,4 +1,5 @@
 .logs {
+  container: logs / inline-size;
   background: var(--background);
   border: 1px solid var(--border);
   border-radius: calc(6px * var(--k));
@@ -7,6 +8,10 @@
   flex-direction: column;
   height: var(--fit-h, 500px);
   min-height: 500px;
+
+  @media (max-width: 860px) {
+    min-height: 360px;
+  }
 
   .logs-bar {
     display: flex;
@@ -58,41 +63,151 @@
       }
 
       .source {
-        position: relative;
         flex: none;
-        min-width: 8ch;
-        max-width: 18ch;
-        padding-left: 14px;
-        overflow: hidden;
+        width: var(--src-w, 8ch);
+        overflow-x: clip;
         white-space: nowrap;
         text-overflow: ellipsis;
-        color: var(--text-secondary);
-
-        &::before {
-          content: "";
-          position: absolute;
-          left: 0;
-          top: 50%;
-          width: 6px;
-          height: 6px;
-          margin-top: -3px;
-          border-radius: 50%;
-          corner-shape: round;
-          background: var(--src);
-        }
+        color: var(--src, var(--text-secondary));
       }
 
       .message {
         flex: 1;
         min-width: 0;
+
+        .hl-time {
+          color: var(--text-muted);
+        }
+
+        .hl-err {
+          color: var(--bad);
+        }
+
+        .hl-warn {
+          color: var(--warn);
+        }
+
+        .hl-info {
+          color: color-mix(in srgb, var(--ok) 80%, var(--text-muted));
+        }
+
+        .hl-debug {
+          color: var(--text-muted);
+        }
+
+        .hl-str {
+          color: color-mix(in srgb, var(--ok) 35%, var(--text-secondary));
+        }
+
+        .hl-url,
+        .hl-path {
+          color: color-mix(in srgb, var(--info) 45%, var(--text-secondary));
+        }
+
+
+        &.json {
+          display: flex;
+          flex-wrap: wrap;
+          align-items: baseline;
+          column-gap: var(--space-8);
+          color: var(--text-secondary);
+
+          .lvl {
+            display: inline-block;
+            min-width: 5ch;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            font-size: 0.6875rem;
+            letter-spacing: 0.04em;
+
+            &.err {
+              color: var(--bad);
+            }
+
+            &.warn {
+              color: var(--warn);
+            }
+          }
+
+          .logger {
+            color: var(--text-muted);
+          }
+
+          .msg {
+            color: var(--text);
+          }
+
+          .kv {
+            color: var(--text-muted);
+
+            i {
+              font-style: normal;
+              opacity: 0.7;
+            }
+          }
+        }
       }
 
-      &.err .message {
+      &.err .message:not(.json) {
+        color: color-mix(in srgb, var(--bad) 75%, var(--text));
+      }
+
+      &.warn .message:not(.json) {
+        color: color-mix(in srgb, var(--warn) 75%, var(--text));
+      }
+
+      &.err .message.json .msg {
         color: var(--bad);
       }
 
-      &.warn .message {
+      &.warn .message.json .msg {
         color: var(--warn);
+      }
+    }
+  }
+}
+
+@container logs (max-width: 640px) {
+  .logs .logs-bar {
+    flex-wrap: wrap;
+
+    .logs-filter {
+      flex: 1 1 100%;
+      max-width: none;
+    }
+  }
+
+  .logs .logs-body {
+    padding: var(--space-8) var(--space-16);
+
+    .log {
+      flex-wrap: wrap;
+      column-gap: var(--space-8);
+      row-gap: 0;
+      padding-block: var(--space-4);
+
+      &:hover {
+        background: none;
+      }
+
+      .time,
+      .source {
+        font-size: 0.6875rem;
+        line-height: 16px;
+      }
+
+      .time .date,
+      .message .lead {
+        display: none;
+      }
+
+      .source {
+        width: auto;
+        max-width: 100%;
+      }
+
+      .message {
+        flex-basis: 100%;
       }
     }
   }

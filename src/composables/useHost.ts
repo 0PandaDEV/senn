@@ -30,6 +30,8 @@ document.addEventListener("change", (event) => {
 function showLogs(picker: HTMLElement) {
   const agent = picker.dataset.logPicker!;
   const ids = [...picker.querySelectorAll<HTMLInputElement>("input[type=checkbox]:checked")].map((i) => i.value);
+  const count = picker.querySelector<HTMLElement>("[data-log-count]");
+  if (count) count.textContent = `${ids.length} selected`;
   const url = new URL(location.href);
   if (ids.length) url.searchParams.set("c", ids.join(","));
   else url.searchParams.delete("c");
@@ -40,6 +42,11 @@ function showLogs(picker: HTMLElement) {
     ? `<div data-logs="/api/hosts/${encodeURIComponent(agent)}/logs?containers=${ids.map(encodeURIComponent).join(",")}" data-multi=""></div>`
     : `<section class="empty small"><p>Pick containers on the left.</p></section>`;
 }
+
+document.addEventListener("click", (event) => {
+  const toggle = (event.target as HTMLElement).closest<HTMLElement>("[data-log-picker-toggle]");
+  if (toggle) toggle.closest(".log-picker")?.classList.toggle("open");
+});
 
 document.addEventListener("click", (event) => {
   const head = (event.target as HTMLElement).closest<HTMLElement>("[data-log-group]");

@@ -7,7 +7,11 @@ use topcoat::{
 
 use crate::{
     app::{PageMeta, meta},
-    components::{badges::state_pill, host_head::host_head},
+    components::{
+        badges::state_pill,
+        host_head::host_head,
+        ui::icon::{Icon, icon},
+    },
     composables::use_host::load,
     layouts::shell::shell,
     proto::ContainerInfo,
@@ -56,7 +60,12 @@ pub async fn logs(cx: &Cx) -> Result<impl View> {
             <div data-agent=(id.clone())>
                 host_head(host: &host)
                 <div class="logs-page">
-                    <aside class="log-picker" data-log-picker=(id.clone())>
+                    <aside class=(if selected.is_empty() { "log-picker open" } else { "log-picker" }) data-log-picker=(id.clone())>
+                        <button type="button" class="log-picker-toggle" data-log-picker-toggle="">
+                            <span>"Containers"</span>
+                            <span class="muted" data-log-count="">(format!("{} selected", selected.len()))</span>
+                            icon(name: Icon::Chevron)
+                        </button>
                         if all.is_empty() {
                             <p class="muted small">"No containers on this host."</p>
                         }
