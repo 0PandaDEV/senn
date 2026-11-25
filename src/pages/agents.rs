@@ -59,9 +59,9 @@ pub async fn agents(cx: &Cx) -> Result<impl View> {
                         <tbody>
                             for a in list {
                                 let online = hub::online(&a.id);
-                                let target = release::resolve(&releases, &a.config.channel);
+                                let target = release::resolve(&releases, &a.config.channel).map(|r| r.version);
                                 let running = a.info.as_ref().map(|i| i.version.clone()).unwrap_or_default();
-                                let behind = target.clone().filter(|t| !running.is_empty() && release::version_of(t) != running);
+                                let behind = target.clone().filter(|t| !running.is_empty() && *t != running);
                                 <tr>
                                     <td><strong>(a.name.clone())</strong></td>
                                     <td>
@@ -81,7 +81,7 @@ pub async fn agents(cx: &Cx) -> Result<impl View> {
                                             }
                                             if let Some(t) = behind.clone() {
                                                 " "
-                                                <span class="pill warn" title=(format!("{} is available", t))><i></i>(release::version_of(&t).to_string())</span>
+                                                <span class="pill warn" title=(format!("{t} is available"))><i></i>(t.clone())</span>
                                             }
                                         } else {
                                             "—"
@@ -161,7 +161,7 @@ pub async fn agents(cx: &Cx) -> Result<impl View> {
                             <select name="channel" data-select="">
                                 <option value="stable">"Latest release"</option>
                                 <option value="nightly">"Latest nightly"</option>
-                                for r in releases.iter().take(40) {
+                                for r in releases.iter().filter(|r| r.tag != "nightly").take(40) {
                                     <option value=(r.tag.clone())>(format!("Pin to {}", r.tag))</option>
                                 }
                             </select>

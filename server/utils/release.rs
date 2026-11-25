@@ -17,6 +17,7 @@ const RETRY: Duration = Duration::from_secs(30 * 60);
 #[derive(Debug, Clone)]
 pub struct Release {
     pub tag: String,
+    pub version: String,
     pub nightly: bool,
 }
 
@@ -73,21 +74,27 @@ async fn fetch() -> Result<Vec<Release>, String> {
         .filter(|r| !r["draft"].as_bool().unwrap_or(false))
         .filter_map(|r| {
             let tag = r["tag_name"].as_str()?.to_string();
+            let version = if tag == "nightly" {
+                version_of(r["name"].as_str()?).to_string()
+            } else {
+                version_of(&tag).to_string()
+            };
             Some(Release {
-                nightly: tag.contains("-nightly"),
+                nightly: version.contains("-nightly"),
+                version,
                 tag,
             })
         })
         .collect())
 }
 
-pub fn resolve(list: &[Release], channel: &str) -> Option<String> {
+pub fn resolve(list: &[Release], channel: &str) -> Option<Release> {
     match channel {
         "nightly" => list.iter().find(|r| r.nightly),
-        "stable" | "" => list.iter().find(|r| !r.tag.contains('-')),
+        "stable" | "" => list.iter().find(|r| !r.version.contains('-')),
         tag => list.iter().find(|r| r.tag == tag),
     }
-    .map(|r| r.tag.clone())
+    .cloned()
 }
 
 pub fn version_of(tag: &str) -> &str {
@@ -143,28 +150,29 @@ pub async fn check(agent_id: &str) {
         return;
     }
     let releases = list().await;
-    let Some(tag) = resolve(&releases, &record.config.channel) else {
+    let Some(release) = resolve(&releases, &record.config.channel) else {
         return;
     };
+    let version = release.version;
     let pinned = !matches!(record.config.channel.as_str(), "stable" | "nightly" | "");
-    if version_of(&tag) == info.version || (!pinned && !newer(&tag, &info.version)) {
+    if version == info.version || (!pinned && !newer(&version, &info.version)) {
         return;
     }
     {
         let mut attempts = ATTEMPTS.lock().expect("attempts lock");
         if let Some((last, at)) = attempts.get(agent_id)
-            && *last == tag
+            && *last == version
             && at.elapsed() < RETRY
         {
             return;
         }
-        attempts.insert(agent_id.to_string(), (tag.clone(), Instant::now()));
+        attempts.insert(agent_id.to_string(), (version.clone(), Instant::now()));
     }
-    match hub::open_stream(agent_id, Op::SelfUpdate { tag: tag.clone() }, false) {
+    match hub::open_stream(agent_id, Op::SelfUpdate { tag: release.tag }, false) {
         Ok(handle) => {
-            tracing::info!("updating agent {} to {tag}", record.name);
+            tracing::info!("updating agent {} to {version}", record.name);
             jobs::start(
-                format!("Update agent {} to {tag}", record.name),
+                format!("Update agent {} to {version}", record.name),
                 format!("/api/agents/{agent_id}/upgrade"),
                 handle,
             );

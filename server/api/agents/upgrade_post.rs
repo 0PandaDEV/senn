@@ -24,7 +24,7 @@ pub async fn upgrade(cx: &Cx, Json(body): Json<Value>) -> Result<Response> {
         .unwrap_or(&record.config.channel)
         .to_string();
     let releases = release::list().await;
-    let tag = release::resolve(&releases, &want)
+    let release = release::resolve(&releases, &want)
         .ok_or_else(|| plain(404, "No matching release found"))?;
-    start_job(cx, Op::SelfUpdate { tag }).await
+    start_job(cx, Op::SelfUpdate { tag: release.tag }).await
 }
