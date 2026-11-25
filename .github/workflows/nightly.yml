@@ -1,9 +1,13 @@
 name: Nightly
 
 on:
-  schedule:
-    - cron: "0 2 * * *"
+  push:
+    branches: ["main"]
   workflow_dispatch:
+
+concurrency:
+  group: nightly
+  cancel-in-progress: false
 
 permissions:
   contents: write
@@ -27,7 +31,7 @@ jobs:
           REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
-          if [ "${{ github.event_name }}" != "schedule" ]; then
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             echo "manual run, building"
             echo "changed=true" >> "$GITHUB_OUTPUT"
             exit 0
