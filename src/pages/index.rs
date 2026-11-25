@@ -57,7 +57,7 @@ pub async fn index(cx: &Cx) -> Result<impl View> {
                     </div>
                     <div class="grid">
                         for c in cards {
-                            <a class="host-card" (nav(cx, format!("/hosts/{}", c.id)))>
+                            <a class="host-card" data-host-card=(c.id.clone()) (nav(cx, format!("/hosts/{}", c.id)))>
                                 node_card(c: c)
                             </a>
                         }

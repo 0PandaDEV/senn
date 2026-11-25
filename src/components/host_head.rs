@@ -56,7 +56,7 @@ pub async fn host_select(
 pub async fn host_head(cx: &Cx, host: &Host) -> Result<impl View> {
     let info = host.record.info.clone();
     Ok(view! {
-        <div data-live="head">
+        <div data-live="head" class="host-head">
         <header class="page-head">
             <div class="title">
                 <h1>

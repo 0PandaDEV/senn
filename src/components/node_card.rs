@@ -141,7 +141,7 @@ pub async fn node_card(cx: &Cx, c: Card, #[default] bare: bool) -> Result<impl V
                     <span class="tag warn">(c.updates) " updates"</span>
                 }
                 if let Some(h) = c.host.as_ref() {
-                    <span class="host-uptime">"up " (duration(h.uptime))</span>
+                    <span class="host-uptime">"up " <span data-stat="uptime">(duration(h.uptime))</span></span>
                 }
             </div>
         }
@@ -151,19 +151,19 @@ pub async fn node_card(cx: &Cx, c: Card, #[default] bare: bool) -> Result<impl V
                 let disk = pct(h.disk_used, h.disk_total);
                 <div class="meters">
                     <div class="meter-tile">
-                        <div class="meter-head"><span>"CPU"</span><b>(format!("{:.1}%", h.cpu))</b></div>
-                        <span class="meter"><i class=(tone(h.cpu)) style=(format!("width:{:.1}%", h.cpu.min(100.0)))></i></span>
-                        <span class="meter-sub">(format!("{} cores · load {:.2}", h.cores, h.load[0]))</span>
+                        <div class="meter-head"><span>"CPU"</span><b data-stat="cpu">(format!("{:.1}%", h.cpu))</b></div>
+                        <span class="meter"><i data-meter="cpu" class=(tone(h.cpu)) style=(format!("width:{:.1}%", h.cpu.min(100.0)))></i></span>
+                        <span class="meter-sub" data-stat="cpu-sub">(format!("{} cores · load {:.2}", h.cores, h.load[0]))</span>
                     </div>
                     <div class="meter-tile">
-                        <div class="meter-head"><span>"Memory"</span><b>(format!("{mem:.0}%"))</b></div>
-                        <span class="meter"><i class=(tone(mem)) style=(format!("width:{mem:.1}%"))></i></span>
-                        <span class="meter-sub">(bytes(h.mem_used)) " / " (bytes(h.mem_total))</span>
+                        <div class="meter-head"><span>"Memory"</span><b data-stat="mem">(format!("{mem:.0}%"))</b></div>
+                        <span class="meter"><i data-meter="mem" class=(tone(mem)) style=(format!("width:{mem:.1}%"))></i></span>
+                        <span class="meter-sub" data-stat="mem-sub">(bytes(h.mem_used)) " / " (bytes(h.mem_total))</span>
                     </div>
                     <div class="meter-tile">
-                        <div class="meter-head"><span>"Disk"</span><b>(format!("{disk:.0}%"))</b></div>
-                        <span class="meter"><i class=(tone(disk)) style=(format!("width:{disk:.1}%"))></i></span>
-                        <span class="meter-sub">(bytes(h.disk_used)) " / " (bytes(h.disk_total))</span>
+                        <div class="meter-head"><span>"Disk"</span><b data-stat="disk">(format!("{disk:.0}%"))</b></div>
+                        <span class="meter"><i data-meter="disk" class=(tone(disk)) style=(format!("width:{disk:.1}%"))></i></span>
+                        <span class="meter-sub" data-stat="disk-sub">(bytes(h.disk_used)) " / " (bytes(h.disk_total))</span>
                     </div>
                 </div>
             }
@@ -190,19 +190,19 @@ pub async fn node_card(cx: &Cx, c: Card, #[default] bare: bool) -> Result<impl V
             if let Some(h) = c.host.clone() {
                 <dl class="io">
                     if bare {
-                        <div><dt>"Uptime"</dt><dd>(duration(h.uptime))</dd></div>
-                        <div><dt>"Load"</dt><dd>(format!("{:.2}", h.load[0])) <small>(format!("{:.2} · {:.2}", h.load[1], h.load[2]))</small></dd></div>
-                        <div><dt>"Swap"</dt><dd>(bytes(h.swap_used)) <small>(format!("of {}", bytes(h.swap_total)))</small></dd></div>
+                        <div><dt>"Uptime"</dt><dd data-stat="uptime">(duration(h.uptime))</dd></div>
+                        <div><dt>"Load"</dt><dd data-stat="load">(format!("{:.2}", h.load[0])) <small>(format!("{:.2} · {:.2}", h.load[1], h.load[2]))</small></dd></div>
+                        <div><dt>"Swap"</dt><dd data-stat="swap">(bytes(h.swap_used)) <small>(format!("of {}", bytes(h.swap_total)))</small></dd></div>
                         if let Some(x) = h.extra.clone() {
-                            <div><dt>"Processes"</dt><dd>(x.procs_total) <small>(format!("{} running", x.procs_running))</small></dd></div>
-                            <div><dt>"TCP sockets"</dt><dd>(x.tcp_inuse)</dd></div>
+                            <div><dt>"Processes"</dt><dd data-stat="procs">(x.procs_total) <small>(format!("{} running", x.procs_running))</small></dd></div>
+                            <div><dt>"TCP sockets"</dt><dd data-stat="tcp">(x.tcp_inuse)</dd></div>
                             if let Some(t) = x.temp {
-                                <div><dt>"Temperature"</dt><dd>(format!("{t:.0} °C"))</dd></div>
+                                <div><dt>"Temperature"</dt><dd data-stat="temp">(format!("{t:.0} °C"))</dd></div>
                             }
                             if let Some(p) = x.pressure_cpu {
-                                <div><dt>"CPU pressure"</dt><dd>(format!("{p:.1}%"))</dd></div>
+                                <div><dt>"CPU pressure"</dt><dd data-stat="pressure">(format!("{p:.1}%"))</dd></div>
                             }
-                            <div><dt>"Disk busy"</dt><dd>(format!("{:.0}%", x.io_busy))</dd></div>
+                            <div><dt>"Disk busy"</dt><dd data-stat="busy">(format!("{:.0}%", x.io_busy))</dd></div>
                         }
                     }
                     if let Some(d) = h.docker.clone() {
@@ -211,10 +211,10 @@ pub async fn node_card(cx: &Cx, c: Card, #[default] bare: bool) -> Result<impl V
                         <div><dt>"Networks"</dt><dd>(d.networks)</dd></div>
                     }
                     <div><dt>"Stacks"</dt><dd>(c.stacks)</dd></div>
-                    <div><dt>"Net in"</dt><dd>(bits(h.net_rx))</dd></div>
-                    <div><dt>"Net out"</dt><dd>(bits(h.net_tx))</dd></div>
-                    <div><dt>"Disk read"</dt><dd>(rate(h.io_read))</dd></div>
-                    <div><dt>"Disk write"</dt><dd>(rate(h.io_write))</dd></div>
+                    <div><dt>"Net in"</dt><dd data-stat="rx">(bits(h.net_rx))</dd></div>
+                    <div><dt>"Net out"</dt><dd data-stat="tx">(bits(h.net_tx))</dd></div>
+                    <div><dt>"Disk read"</dt><dd data-stat="read">(rate(h.io_read))</dd></div>
+                    <div><dt>"Disk write"</dt><dd data-stat="write">(rate(h.io_write))</dd></div>
                 </dl>
             } else {
                 <p class="muted small">"Resource stats need the latest agent."</p>

@@ -992,3 +992,15 @@ img.avatar {
     color: var(--accent);
   }
 }
+
+@media (max-width: 860px) {
+  .host-head {
+    > .page-head {
+      display: none;
+    }
+
+    &:not(:has(.banner)) {
+      display: none;
+    }
+  }
+}

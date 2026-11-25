@@ -27,7 +27,7 @@ pub async fn node(cx: &Cx) -> Result<impl View> {
                 host_head(host: &host)
                 <div data-live="node">
                     if let Some(c) = card {
-                        <div class="host-card static">
+                        <div class="host-card static" data-host-card=(c.id.clone())>
                             node_card(c: c, bare: true)
                         </div>
                     }

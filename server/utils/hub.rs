@@ -348,11 +348,13 @@ pub async fn serve(agent_id: String, socket: WebSocket) {
             }
             FromAgent::Event { kind, data } => {
                 if kind == "stats" {
+                    let mut host = Value::Null;
                     if let Ok(stats) = serde_json::from_value::<Stats>(data) {
                         patch_stats(&connection, &stats);
+                        host = serde_json::json!({ "host": &stats.host });
                         metrics::ingest(&agent_id, stats);
                     }
-                    emit(&agent_id, &kind, Value::Null);
+                    emit(&agent_id, &kind, host);
                 } else {
                     *connection.cache.lock().expect("cache lock") = None;
                     metrics::invalidate(&agent_id);

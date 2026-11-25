@@ -37,7 +37,7 @@ const STYLES: [&str; 7] = [
     "metrics",
 ];
 
-const SCRIPTS: [&str; 20] = [
+const SCRIPTS: [&str; 21] = [
     "useLive",
     "useToast",
     "useDialog",
@@ -54,6 +54,7 @@ const SCRIPTS: [&str; 20] = [
     "useHost",
     "useSelect",
     "useCron",
+    "useHostCard",
     "usePolicy",
     "useFade",
     "useSettings",
