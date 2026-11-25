@@ -22,6 +22,7 @@ function enhance(select: HTMLSelectElement) {
   button.innerHTML = `<span class="select-label"></span>${icon("chevron", 14)}`;
   wrap.appendChild(button);
   const labelEl = button.querySelector<HTMLElement>(".select-label")!;
+  if (select.hasAttribute("data-mid-label")) labelEl.dataset.mid = "";
 
   const label = () => {
     labelEl.textContent = select.selectedOptions[0]?.textContent ?? "";

@@ -81,7 +81,7 @@ pub async fn host(cx: &Cx) -> Result<impl View> {
                                             if let Some(e) = s.error.clone() {
                                                 <div class="sub err" title=(e.clone())>"compose file has errors"</div>
                                             } else {
-                                                <div class="sub" title=(host.stack_dir(&s.name))>(host.stack_dir(&s.name))</div>
+                                                <div class="sub" data-mid="">(host.stack_dir(&s.name))</div>
                                             }
                                         </td>
                                         <td><div class="status">
@@ -127,7 +127,7 @@ pub async fn host(cx: &Cx) -> Result<impl View> {
                                     <tr class="row">
                                         <td>
                                             <a class="strong go" (nav(cx, format!("/hosts/{id}/containers/{}", c.id)))>(c.name.clone())</a>
-                                            <div class="sub" title=(c.image.clone())>(c.image.clone())</div>
+                                            <div class="sub" data-mid="">(c.image.clone())</div>
                                         </td>
                                         <td>state_pill(state: &c.state, health: c.health.as_deref())</td>
                                         <td>usage(u: Usage::of(&c))</td>

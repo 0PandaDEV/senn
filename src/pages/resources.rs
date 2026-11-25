@@ -150,6 +150,7 @@ pub async fn volumes(cx: &Cx) -> Result<impl View> {
                                                         " · anonymous"
                                                     }
                                                 </div>
+                                                <div class="sub" data-mid="">(v.mountpoint.clone())</div>
                                             </td>
                                             <td>used_by(names: v.used_by.clone())</td>
                                             <td><div class="row-actions">
