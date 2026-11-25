@@ -16,7 +16,14 @@ pub struct AgentConfig {
     pub channel: String,
     #[serde(default)]
     pub self_update: bool,
+    #[serde(default)]
+    pub update_cron: String,
+    #[serde(default)]
+    pub self_update_cron: String,
 }
+
+pub const DEFAULT_UPDATE_CRON: &str = "0 */6 * * *";
+pub const DEFAULT_SELF_UPDATE_CRON: &str = "0 4 * * *";
 
 fn default_channel() -> String {
     "stable".into()
@@ -31,6 +38,8 @@ impl Default for AgentConfig {
             policies: Default::default(),
             channel: default_channel(),
             self_update: true,
+            update_cron: DEFAULT_UPDATE_CRON.into(),
+            self_update_cron: DEFAULT_SELF_UPDATE_CRON.into(),
         }
     }
 }

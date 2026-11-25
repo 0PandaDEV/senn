@@ -289,7 +289,6 @@ pub async fn serve(agent_id: String, socket: WebSocket) {
                 hello = true;
                 tracing::info!("agent {} ({}) connected", record.name, agent_id);
                 emit(&agent_id, "online", Value::Null);
-                crate::server::utils::release::later(agent_id.clone(), 15);
             }
             _ if !hello => break,
             FromAgent::Res {

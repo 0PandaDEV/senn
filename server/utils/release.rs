@@ -12,7 +12,7 @@ use crate::{
 };
 
 const TTL: Duration = Duration::from_secs(15 * 60);
-const RETRY: Duration = Duration::from_secs(6 * 60 * 60);
+const RETRY: Duration = Duration::from_secs(30 * 60);
 
 #[derive(Debug, Clone)]
 pub struct Release {
@@ -180,14 +180,26 @@ pub fn later(agent_id: String, secs: u64) {
     });
 }
 
+pub fn schedule(config: &crate::proto::AgentConfig) -> crate::cron::Cron {
+    crate::cron::Cron::parse(&config.self_update_cron)
+        .or_else(|_| crate::cron::Cron::parse(crate::proto::DEFAULT_SELF_UPDATE_CRON))
+        .expect("default schedule")
+}
+
 pub fn start() {
     tokio::spawn(async {
-        tokio::time::sleep(Duration::from_secs(60)).await;
+        let mut last: HashMap<String, jiff::Timestamp> = HashMap::new();
+        let boot = jiff::Timestamp::now();
         loop {
+            tokio::time::sleep(Duration::from_secs(30)).await;
+            let now = jiff::Timestamp::now();
             for agent in state::agents().await {
-                check(&agent.id).await;
+                let since = *last.get(&agent.id).unwrap_or(&boot);
+                if schedule(&agent.config).due(since, now) {
+                    last.insert(agent.id.clone(), now);
+                    check(&agent.id).await;
+                }
             }
-            tokio::time::sleep(Duration::from_secs(60 * 60)).await;
         }
     });
 }

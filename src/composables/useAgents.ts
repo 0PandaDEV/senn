@@ -46,7 +46,8 @@ document.addEventListener("submit", async (event) => {
       await post(`/api/agents/${data.id}/config`, {
         name: data.name,
         defaultPolicy: String(data.defaultPolicy),
-        updateIntervalMinutes: Number(data.updateIntervalMinutes),
+        updateCron: String(data.updateCron ?? ""),
+        selfUpdateCron: String(data.selfUpdateCron ?? ""),
         address: String(data.address ?? ""),
         channel: String(data.channel ?? "stable"),
         selfUpdate: data.selfUpdate !== "off",
@@ -86,7 +87,8 @@ document.addEventListener("click", async (event) => {
     (form.elements.namedItem("id") as HTMLInputElement).value = edit.dataset.editAgent!;
     (form.elements.namedItem("name") as HTMLInputElement).value = edit.dataset.name ?? "";
     (form.elements.namedItem("defaultPolicy") as HTMLSelectElement).value = edit.dataset.policy ?? "notify";
-    (form.elements.namedItem("updateIntervalMinutes") as HTMLInputElement).value = edit.dataset.interval ?? "360";
+    (form.elements.namedItem("updateCron") as HTMLInputElement).value = edit.dataset.updateCron || "0 */6 * * *";
+    (form.elements.namedItem("selfUpdateCron") as HTMLInputElement).value = edit.dataset.selfUpdateCron || "0 4 * * *";
     const channel = form.elements.namedItem("channel") as HTMLSelectElement;
     if (edit.dataset.channel && ![...channel.options].some((o) => o.value === edit.dataset.channel)) channel.add(new Option(`Pin to ${edit.dataset.channel}`, edit.dataset.channel));
     channel.value = edit.dataset.channel ?? "stable";

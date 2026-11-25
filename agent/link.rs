@@ -262,12 +262,14 @@ async fn schedule(ctx: Arc<Ctx>, out: mpsc::UnboundedSender<FromAgent>) {
     loop {
         let cfg = ctx.config();
         let interval = cfg.update_interval_secs.max(300);
-        let due = ctx
-            .updates
-            .snapshot()
-            .1
-            .map(|t| crate::updates::now() - t >= interval as i64)
-            .unwrap_or(true);
+        let last = ctx.updates.snapshot().1;
+        let due = match (crate::cron::Cron::parse(&cfg.update_cron), last) {
+            (_, None) => true,
+            (Ok(cron), Some(t)) => jiff::Timestamp::from_second(t)
+                .map(|t| cron.due(t, jiff::Timestamp::now()))
+                .unwrap_or(true),
+            (Err(_), Some(t)) => crate::updates::now() - t >= interval as i64,
+        };
         if due {
             if let Err(e) = handlers::check_updates(&ctx, |_| {}).await {
                 tracing::warn!("update check failed: {e}");

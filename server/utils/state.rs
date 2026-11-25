@@ -137,6 +137,8 @@ fn agent_from_row(r: &SqliteRow) -> AgentRecord {
             policies: BTreeMap::new(),
             channel: r.get("channel"),
             self_update: r.get::<i64, _>("self_update") != 0,
+            update_cron: r.get("update_cron"),
+            self_update_cron: r.get("self_update_cron"),
         },
         last_seen: r.get("last_seen"),
         info: info.and_then(|i| serde_json::from_str(&i).ok()),
@@ -279,7 +281,7 @@ pub async fn set_agent_settings(
     address: Option<&str>,
 ) -> Option<AgentRecord> {
     sqlx::query(
-        "UPDATE agent SET name = ?, update_interval_secs = ?, auto_update = ?, default_policy = ?, address = ?, channel = ?, self_update = ? WHERE id = ?",
+        "UPDATE agent SET name = ?, update_interval_secs = ?, auto_update = ?, default_policy = ?, address = ?, channel = ?, self_update = ?, update_cron = ?, self_update_cron = ? WHERE id = ?",
     )
     .bind(name)
     .bind(config.update_interval_secs as i64)
@@ -288,6 +290,8 @@ pub async fn set_agent_settings(
     .bind(address)
     .bind(&config.channel)
     .bind(config.self_update as i64)
+    .bind(&config.update_cron)
+    .bind(&config.self_update_cron)
     .bind(id)
     .execute(pool())
     .await

@@ -42,6 +42,15 @@ pub async fn update(cx: &Cx, Json(body): Json<Value>) -> Result<Response> {
     if let Some(on) = body.get("selfUpdate").and_then(Value::as_bool) {
         cfg.self_update = on;
     }
+    for (key, slot) in [
+        ("updateCron", &mut cfg.update_cron),
+        ("selfUpdateCron", &mut cfg.self_update_cron),
+    ] {
+        if let Some(text) = body.get(key).and_then(Value::as_str).map(str::trim) {
+            crate::cron::Cron::parse(text).map_err(|e| plain(400, &format!("Schedule {text}: {e}")))?;
+            *slot = text.to_string();
+        }
+    }
     if let Some(minutes) = body.get("updateIntervalMinutes").and_then(Value::as_u64) {
         cfg.update_interval_secs = minutes.clamp(5, 60 * 24 * 30) * 60;
     }

@@ -1,6 +1,9 @@
 #[path = "../shared/proto.rs"]
 mod proto;
 
+#[path = "../shared/cron.rs"]
+mod cron;
+
 mod compose;
 mod config;
 mod docker;

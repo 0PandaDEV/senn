@@ -15,6 +15,18 @@ use crate::{
     server::utils::{format::ago, hub, release, state},
 };
 
+fn next_run(expr: &str) -> String {
+    let Ok(cron) = crate::cron::Cron::parse(expr) else {
+        return "invalid schedule".into();
+    };
+    let now = jiff::ZonedDateTime::now();
+    match cron.next_after(&now) {
+        Some(next) if next.date() == now.date() => format!("next {}", next.strftime("%H:%M")),
+        Some(next) => format!("next {}", next.strftime("%b %-d %H:%M")),
+        None => "never runs".into(),
+    }
+}
+
 #[page("/agents", with(meta("Agents · Senn")), with(PageMeta { public: false }))]
 pub async fn agents(cx: &Cx) -> Result<impl View> {
     let now = state::now();
@@ -76,7 +88,7 @@ pub async fn agents(cx: &Cx) -> Result<impl View> {
                                         }
                                     </td>
                                     <td class="muted">
-                                        "checks every " (a.config.update_interval_secs / 60) " min · "
+                                        "images: " (a.config.update_cron.clone()) " · " (next_run(&a.config.update_cron)) " · "
                                         match a.config.policy_default() {
                                             "auto" => "updates automatically",
                                             "off" => "updates ignored",
@@ -84,14 +96,18 @@ pub async fn agents(cx: &Cx) -> Result<impl View> {
                                         }
                                         <div class="sub">
                                             "agent: " (release::label(&a.config.channel))
-                                            (if a.config.self_update { " · updates itself" } else { " · manual" })
+                                            if a.config.self_update {
+                                                " · " (a.config.self_update_cron.clone()) " · " (next_run(&a.config.self_update_cron))
+                                            } else {
+                                                " · manual"
+                                            }
                                         </div>
                                     </td>
                                     <td><div class="row-actions">
                                         if online && behind.is_some() {
                                             job_button(url: format!("/api/agents/{}/upgrade", a.id), title: format!("Update agent {}", a.name), label: "Update", glyph: Icon::Update, text: true)
                                         }
-                                        <button type="button" class="button" data-edit-agent=(a.id.clone()) data-channel=(a.config.channel.clone()) data-self-update=(if a.config.self_update { "on" } else { "off" }) data-name=(a.name.clone()) data-policy=(a.config.policy_default()) data-interval=(a.config.update_interval_secs / 60) data-address=(a.address.clone().unwrap_or_default()) data-detected=(a.info.as_ref().and_then(|i| i.address.clone()).unwrap_or_default())>
+                                        <button type="button" class="button" data-edit-agent=(a.id.clone()) data-channel=(a.config.channel.clone()) data-self-update=(if a.config.self_update { "on" } else { "off" }) data-name=(a.name.clone()) data-policy=(a.config.policy_default()) data-update-cron=(a.config.update_cron.clone()) data-self-update-cron=(a.config.self_update_cron.clone()) data-address=(a.address.clone().unwrap_or_default()) data-detected=(a.info.as_ref().and_then(|i| i.address.clone()).unwrap_or_default())>
                                             icon(name: Icon::Pencil)
                                             <span>"Edit"</span>
                                         </button>
@@ -157,6 +173,10 @@ pub async fn agents(cx: &Cx) -> Result<impl View> {
                                 <option value="off">"Manually, with the Update button"</option>
                             </select>
                         </label>
+                        <label class="field">
+                            <span>"Agent update schedule " <small>"cron, server time"</small></span>
+                            <input name="selfUpdateCron" data-cron="" placeholder="0 4 * * *" autocomplete="off" spellcheck="false" required=(true)>
+                        </label>
                         <div class="dialog-section">
                             <h3>"Containers"</h3>
                             <p>"Image updates for the stacks on this host. Single stacks and services can override this."</p>
@@ -170,8 +190,8 @@ pub async fn agents(cx: &Cx) -> Result<impl View> {
                             </select>
                         </label>
                         <label class="field">
-                            <span>"Check for newer images every (minutes)"</span>
-                            <input type="number" name="updateIntervalMinutes" min="5" max="43200" required=(true)>
+                            <span>"Image check schedule " <small>"cron, host time"</small></span>
+                            <input name="updateCron" data-cron="" placeholder="0 */6 * * *" autocomplete="off" spellcheck="false" required=(true)>
                         </label>
                         <div class="dialog-actions">
                             <button type="button" class="button" data-close="">"Cancel"</button>

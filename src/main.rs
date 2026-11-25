@@ -6,6 +6,8 @@ mod pages;
 
 #[path = "../shared/proto.rs"]
 mod proto;
+#[path = "../shared/cron.rs"]
+mod cron;
 #[path = "../server/mod.rs"]
 mod server;
 
