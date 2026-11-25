@@ -118,6 +118,7 @@ pub async fn state(ctx: &Ctx) -> Result<HostState, String> {
             None => c.update_policy.clone(),
         };
     }
+    ctx.updates.reconcile(&ctx.docker, &containers).await;
     let (updates, updates_checked_at) = ctx.updates.snapshot();
     Ok(HostState {
         stacks,

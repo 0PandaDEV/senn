@@ -62,6 +62,58 @@ impl Updates {
         });
     }
 
+    pub async fn reconcile(&self, docker: &Docker, containers: &[ContainerInfo]) {
+        let pending: Vec<(String, String)> = {
+            let d = self.data.lock().expect("updates lock");
+            d.items
+                .iter()
+                .filter(|i| i.status == "available")
+                .filter_map(|i| Some((i.image.clone(), i.remote.clone()?)))
+                .collect()
+        };
+        if pending.is_empty() {
+            return;
+        }
+        let mut caught_up = Vec::new();
+        for (image, remote) in pending {
+            let ids: std::collections::BTreeSet<&str> = containers
+                .iter()
+                .filter(|c| c.image == image)
+                .map(|c| c.image_id.as_str())
+                .collect();
+            if ids.is_empty() {
+                continue;
+            }
+            let mut all = true;
+            for id in ids {
+                let digests = docker
+                    .inspect_image(id)
+                    .await
+                    .ok()
+                    .and_then(|i| i.repo_digests)
+                    .unwrap_or_default();
+                if !digests.iter().any(|d| d.ends_with(&format!("@{remote}"))) {
+                    all = false;
+                    break;
+                }
+            }
+            if all {
+                caught_up.push(image);
+            }
+        }
+        if caught_up.is_empty() {
+            return;
+        }
+        let mut data = self.data.lock().expect("updates lock").clone();
+        for item in &mut data.items {
+            if caught_up.contains(&item.image) {
+                item.status = "current".into();
+                item.local = item.remote.clone();
+            }
+        }
+        self.store(data);
+    }
+
     pub async fn refresh(&self, docker: &Docker, containers: &[ContainerInfo], images: &[String]) {
         let subset: Vec<ContainerInfo> = containers
             .iter()
