@@ -14,9 +14,6 @@ permissions:
   packages: write
   actions: read
 
-env:
-  NIGHTLY_KEEP: 30
-
 jobs:
   check:
     name: Check for changes
@@ -95,7 +92,7 @@ jobs:
     needs: [version, build]
     runs-on: ubuntu-24.04
     env:
-      TAG: v${{ needs.version.outputs.full }}
+      TITLE: v${{ needs.version.outputs.full }}
       GH_TOKEN: ${{ github.token }}
       GH_REPO: ${{ github.repository }}
     steps:
@@ -104,10 +101,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          PREV=$(gh release list --limit 100 --json tagName,createdAt --jq '[.[] | select(.tagName | test("-nightly"))] | sort_by(.createdAt) | reverse | .[0].tagName // ""')
-          STABLE=$(gh release list --limit 100 --exclude-pre-releases --json tagName,createdAt --jq 'sort_by(.createdAt) | reverse | .[0].tagName // ""')
+          REFS=$(gh release list --limit 100 --json tagName,createdAt,isPrerelease \
+            --jq '[.[] | select(.tagName == "nightly" or (.isPrerelease | not))] | sort_by(.createdAt) | reverse | .[].tagName')
           BASE=""
-          for ref in "$PREV" "$STABLE"; do
+          for ref in $REFS; do
             [ -n "$ref" ] || continue
             BASE=$(gh api "repos/$GH_REPO/commits/$ref" --jq .sha 2>/dev/null || true)
             [ -n "$BASE" ] && break
@@ -142,15 +139,20 @@ jobs:
           NOTES: ${{ steps.changelog.outputs.markdown }}
         run: |
           set -euo pipefail
-          gh release create "$TAG" --target "${{ github.sha }}" --prerelease --title "$TAG" --notes "$NOTES" release/*
+          gh release delete nightly --cleanup-tag --yes 2>/dev/null || true
+          gh release create nightly --target "${{ github.sha }}" --prerelease --latest=false --title "$TITLE" --notes "$NOTES" release/*
 
-      - name: Prune old nightlies
+      - name: Remove legacy nightly tags
         shell: bash
         run: |
           set -euo pipefail
-          gh release list --limit 200 --json tagName,createdAt \
-            --jq '[.[] | select(.tagName | test("-nightly"))] | sort_by(.createdAt) | reverse | .[env.NIGHTLY_KEEP | tonumber:] | .[].tagName' \
+          gh release list --limit 200 --json tagName --jq '.[].tagName | select(test("-nightly"))' \
             | while read -r old; do
-                echo "deleting $old"
+                echo "deleting release $old"
                 gh release delete "$old" --cleanup-tag --yes
+              done
+          gh api --paginate "repos/$GH_REPO/git/matching-refs/tags/v" --jq '.[].ref | select(test("-nightly"))' \
+            | while read -r ref; do
+                echo "deleting $ref"
+                gh api -X DELETE "repos/$GH_REPO/git/$ref"
               done
