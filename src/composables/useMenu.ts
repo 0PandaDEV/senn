@@ -3,13 +3,16 @@ function shell() {
 }
 
 function close() {
-  shell()?.classList.remove("menu-open");
+  const el = shell();
+  if (!el?.classList.contains("menu-open")) return;
+  el.classList.remove("menu-open");
 }
 
 document.addEventListener("click", (event) => {
   const target = event.target as HTMLElement;
   if (target.closest("[data-menu]")) {
-    shell()?.classList.toggle("menu-open");
+    if (shell()?.classList.contains("menu-open")) close();
+    else shell()?.classList.add("menu-open");
     return;
   }
   if (target.closest("[data-menu-close], .sidebar a, .sidebar .signout")) close();

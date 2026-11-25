@@ -1,6 +1,8 @@
 import { icon } from "./useIcons.js";
 import { escapeHtml } from "./useStream.js";
 
+const IOS = CSS.supports("-webkit-touch-callout", "none");
+
 const VALUE = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value")!;
 const INDEX = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "selectedIndex")!;
 
@@ -124,10 +126,10 @@ function enhance(select: HTMLSelectElement) {
     menu = document.createElement("div");
     menu.className = "select-menu";
     menu.setAttribute("role", "listbox");
-    menu.setAttribute("popover", "manual");
+    if (!IOS) menu.setAttribute("popover", "manual");
     menu.innerHTML = html;
     wrap.appendChild(menu);
-    menu.showPopover();
+    if (!IOS) menu.showPopover();
     place();
     wrap.classList.add("open");
     button.setAttribute("aria-expanded", "true");

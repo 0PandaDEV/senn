@@ -101,20 +101,28 @@
     display: none;
 
     @media (max-width: 860px) {
-      display: block;
       position: fixed;
       inset: 0;
       z-index: 55;
-      background: #0009;
-      opacity: 0;
-      pointer-events: none;
+    }
+  }
+
+  @media (max-width: 860px) {
+    .main,
+    .topbar {
       transition: opacity 0.25s;
+    }
+
+    &.menu-open .main,
+    &.menu-open .topbar {
+      opacity: 0.4;
     }
   }
 
   &.menu-open .scrim {
-    opacity: 1;
-    pointer-events: auto;
+    @media (max-width: 860px) {
+      display: block;
+    }
   }
 }
 
@@ -165,6 +173,7 @@
 
     .shell.menu-open & {
       transform: none;
+      box-shadow: 0 12px 48px #000c;
     }
   }
 
@@ -467,7 +476,7 @@
       min-width: 0;
     }
 
-    &:hover {
+    &:not(.static):hover {
       background: var(--element-hover);
       border-color: var(--border-hover);
       color: inherit;
@@ -774,13 +783,20 @@
   box-shadow: 0 12px 48px #000a;
   overflow: hidden;
   transform: translateX(calc(100% + 2 * var(--space-8)));
-  visibility: hidden;
-  transition: transform 0.25s cubic-bezier(0.3, 0.7, 0.2, 1), visibility 0s 0.25s;
+  transition:
+    transform 0.25s cubic-bezier(0.3, 0.7, 0.2, 1),
+    display 0.25s allow-discrete;
+
+  &:not([data-open]) {
+    display: none;
+  }
 
   &[data-open] {
     transform: none;
-    visibility: visible;
-    transition: transform 0.25s cubic-bezier(0.3, 0.7, 0.2, 1);
+
+    @starting-style {
+      transform: translateX(calc(100% + 2 * var(--space-8)));
+    }
   }
 
   &[hidden] {
