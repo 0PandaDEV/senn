@@ -159,7 +159,8 @@ export class Chart {
   private queued = false;
   private overlayQueued = false;
   private geo: Geo | null = null;
-  private readonly left = GUTTER;
+  private left = GUTTER;
+  private awayBound = false;
   readonly unit: Unit;
   private yMax?: number;
   onCursor: (t: number | null) => void = () => {};
@@ -223,7 +224,7 @@ export class Chart {
   }
 
   empty(text: string | null) {
-    this.el.classList.toggle("empty", text !== null);
+    this.el.classList.toggle("no-data", text !== null);
     this.emptyEl.hidden = text === null;
     this.emptyEl.textContent = text ?? "";
   }
@@ -368,14 +369,33 @@ export class Chart {
       this.drawOverlay();
       this.onCursor(t);
     });
-    canvas.addEventListener("pointerleave", () => {
-      if (this.drag) return;
+    canvas.addEventListener("pointerleave", (event) => {
+      if (this.drag || event.pointerType === "touch") return;
       this.local = false;
       this.cursor = null;
       this.drawOverlay();
       this.onCursor(null);
     });
     canvas.addEventListener("pointerdown", (event) => {
+      if (event.pointerType === "touch") {
+        this.local = true;
+        this.cursor = time(event);
+        this.drawOverlay();
+        this.onCursor(this.cursor);
+        if (this.awayBound) return;
+        this.awayBound = true;
+        const away = (e: PointerEvent) => {
+          if (canvas.contains(e.target as Node)) return;
+          document.removeEventListener("pointerdown", away, true);
+          this.awayBound = false;
+          this.local = false;
+          this.cursor = null;
+          this.drawOverlay();
+          this.onCursor(null);
+        };
+        document.addEventListener("pointerdown", away, true);
+        return;
+      }
       if (event.button !== 0) return;
       canvas.setPointerCapture(event.pointerId);
       const x = localX(event);
@@ -441,6 +461,7 @@ export class Chart {
     const ticks = this.yMax ? yTicks(this.yMax, this.unit) : yTicks(max * 1.05, this.unit);
     const top = ticks[ticks.length - 1] ?? 1;
     const labels = ticks.map((v) => formatValue(v, this.unit));
+    this.left = Math.ceil(Math.max(0, ...labels.map((l) => ctx.measureText(l).width))) + 10;
     const x0 = this.left;
     const x1 = w - PAD.right;
     const y0 = PAD.top;
@@ -648,7 +669,8 @@ export class Chart {
     const plotWidth = this.plot.clientWidth;
     if (this.tipSide === "r" && x + 14 + w > plotWidth) this.tipSide = "l";
     else if (this.tipSide === "l" && x + 14 + w + 24 <= plotWidth) this.tipSide = "r";
-    this.tip.style.left = `${this.tipSide === "r" ? x + 14 : Math.max(4, x - 14 - w)}px`;
+    const left = this.tipSide === "r" ? x + 14 : x - 14 - w;
+    this.tip.style.left = `${Math.max(4, Math.min(left, plotWidth - w - 4))}px`;
     this.tip.style.top = `${PAD.top}px`;
   }
 }

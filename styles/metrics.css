@@ -45,10 +45,15 @@
   .chart {
     --grid: rgb(255 255 255 / 6%);
     display: grid;
-    gap: var(--space-12);
+    gap: var(--space-16);
     min-width: 0;
     padding: var(--space-16);
     background: var(--element);
+
+    @media (max-width: 860px) {
+      padding: var(--space-8);
+    }
+
     border: 1px solid var(--border);
     border-top-color: var(--border-hover);
     border-radius: calc(6px * var(--k));
@@ -88,7 +93,7 @@
     width: max-content;
     min-width: 11.5rem;
     max-width: 20rem;
-    padding: var(--space-8) var(--space-12);
+    padding: var(--space-8) var(--space-16);
     border: 1px solid var(--border);
     border-radius: calc(6px * var(--k));
     background: var(--background);
@@ -128,7 +133,7 @@
       }
 
       span {
-        overflow: hidden;
+        overflow-x: clip;
         text-overflow: ellipsis;
         white-space: nowrap;
       }
@@ -162,6 +167,7 @@
     position: relative;
     height: 240px;
     min-width: 0;
+    overflow-x: clip;
 
     canvas {
       position: absolute;
@@ -191,10 +197,11 @@
     z-index: 2;
     display: grid;
     gap: var(--space-4);
-    padding: var(--space-8) var(--space-12);
+    padding: var(--space-8) var(--space-16);
     background: var(--background);
     border: 1px solid var(--border-hover);
     border-radius: calc(4px * var(--k));
+    max-width: calc(100% - 8px);
     font-size: 0.6875rem;
     pointer-events: none;
     white-space: nowrap;
@@ -218,11 +225,17 @@
 
     span {
       color: var(--text-secondary);
+      min-width: 0;
+      overflow-x: clip;
+      text-overflow: ellipsis;
+    }
+
+    span {
+      flex: 1;
     }
 
     b {
-      margin-left: auto;
-      padding-left: var(--space-12);
+      padding-left: var(--space-16);
       font-weight: 500;
       font-variant-numeric: tabular-nums;
     }
@@ -239,9 +252,22 @@
   align-items: center;
   gap: var(--space-8);
   width: 100%;
+  min-width: 0;
 
   .tp-picker {
     position: relative;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .tp-button {
+    max-width: 100%;
+
+    .tp-label {
+      min-width: 0;
+      overflow-x: clip;
+      text-overflow: ellipsis;
+    }
   }
 
   .tp-button,
@@ -250,7 +276,7 @@
     align-items: center;
     gap: var(--space-8);
     min-height: var(--control-h);
-    padding: 0 var(--space-8) 0 var(--space-12);
+    padding: 0 var(--space-8);
     border: 1px solid var(--border-hover);
     border-radius: calc(6px * var(--k));
     background: var(--background);
@@ -308,8 +334,8 @@
     gap: var(--space-4);
   }
 
-  .tp-refresh {
-    margin-left: auto;
+  .tp-nav {
+    flex: 1;
   }
 
   .tp-refresh-button {
@@ -334,7 +360,8 @@
     top: calc(100% + var(--space-8));
     left: 0;
     display: grid;
-    grid-template-columns: 300px 240px;
+    grid-template-columns: minmax(0, 300px) minmax(0, 240px);
+    width: 550px;
     max-width: calc(100vw - 2 * var(--space-16));
     padding: var(--space-4);
     background: var(--element);
@@ -353,9 +380,9 @@
   .tp-quick {
     display: grid;
     align-content: start;
-    gap: var(--space-12);
+    gap: var(--space-16);
     min-width: 0;
-    padding: var(--space-12);
+    padding: var(--space-16);
   }
 
   .tp-quick {
@@ -384,8 +411,10 @@
   .tp-input {
     position: relative;
     display: flex;
+    min-width: 0;
 
     input {
+      min-width: 0;
       padding-right: calc(var(--control-h) + var(--space-4));
     }
 
@@ -438,7 +467,7 @@
   }
 
   .tp-zone {
-    padding-top: var(--space-12);
+    padding-top: var(--space-16);
     border-top: 1px solid var(--border);
     font-size: 0.6875rem;
 
@@ -451,12 +480,9 @@
   .tp-list {
     display: grid;
     align-content: start;
-    gap: 2px;
-    margin-inline: calc(-1 * var(--space-8));
-    padding-inline: var(--space-8);
+    gap: var(--space-4);
     overflow-y: auto;
-    scrollbar-color: var(--border-hover) transparent;
-  }
+    }
 
   .tp-item {
     display: flex;
@@ -473,7 +499,7 @@
     color: var(--text-secondary);
     text-align: left;
     white-space: nowrap;
-    overflow: hidden;
+    overflow-x: clip;
     text-overflow: ellipsis;
     cursor: pointer;
     transition: var(--hover-transition);
@@ -504,7 +530,7 @@
     top: calc(100% + var(--space-8));
     right: 0;
     display: grid;
-    gap: 2px;
+    gap: var(--space-4);
     min-width: 140px;
     padding: var(--space-4);
     background: var(--element);
@@ -523,7 +549,7 @@
   display: grid;
   gap: var(--space-8);
   width: 268px;
-  padding: var(--space-12);
+  padding: var(--space-16);
   background: var(--background);
   border: 1px solid var(--border-hover);
   border-radius: calc(6px * var(--k));
@@ -562,7 +588,7 @@
   .dp-grid {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
-    gap: 2px;
+    gap: var(--space-4);
   }
 
   .dp-week span {
@@ -610,7 +636,7 @@
     border-top: 1px solid var(--border);
 
     span {
-      margin-right: auto;
+      flex: 1;
       font-size: 0.75rem;
     }
 
@@ -640,7 +666,7 @@
   }
 }
 
-@media (max-width: 640px) {
+@media (max-width: 860px) {
   .tp .tp-pop {
     grid-template-columns: minmax(0, 1fr);
     width: calc(100vw - 2 * var(--space-16));
@@ -652,13 +678,10 @@
     }
   }
 
-  .tp .tp-refresh {
-    margin-left: 0;
-  }
 }
 
 .metrics .chart-group {
-  margin-top: var(--space-8);
+  padding-top: var(--space-8);
   padding-bottom: var(--space-4);
   border-bottom: 1px solid var(--border);
   font-size: 0.6875rem;
@@ -669,7 +692,7 @@
 }
 
 .metrics .chart-grid > .chart-group:first-child {
-  margin-top: 0;
+  padding-top: 0;
 }
 
 .metrics .chart {
@@ -677,13 +700,13 @@
     font-size: 0.75rem;
   }
 
-  &.empty {
+  &.no-data {
     gap: 0;
-    padding-block: var(--space-12);
+    padding-block: var(--space-16);
 
     > header {
       align-items: center;
-      justify-content: flex-start;
+      justify-content: space-between;
       gap: var(--space-4) var(--space-16);
     }
 
@@ -694,7 +717,12 @@
 
     h3 {
       color: var(--text-secondary);
+      font-size: 0.875rem;
       font-weight: 500;
+    }
+
+    .chart-empty {
+      color: var(--text-muted);
     }
   }
 }
