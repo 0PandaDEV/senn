@@ -317,10 +317,3 @@ select {
   }
 }
 
-@media (max-width: 860px), (pointer: coarse) {
-  input:not([type="checkbox"], [type="radio"]),
-  textarea,
-  select {
-    font-size: 16px !important;
-  }
-}

@@ -37,7 +37,8 @@ const STYLES: [&str; 7] = [
     "metrics",
 ];
 
-const SCRIPTS: [&str; 22] = [
+const SCRIPTS: [&str; 23] = [
+    "useViewport",
     "useLive",
     "useToast",
     "useDialog",
