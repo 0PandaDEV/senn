@@ -1,4 +1,5 @@
 import { escapeHtml } from "./useStream.js";
+import { Completer } from "./useComplete.js";
 
 export type Lang = "yaml" | "env" | "shell" | "docker" | "json" | "conf" | "text";
 
@@ -128,7 +129,21 @@ export class Editor {
       for (const fn of this.listeners) fn();
     });
     this.input.addEventListener("scroll", () => this.sync());
+    new Completer(this.input, this.el.querySelector(".editor-body")!, () => this.lang === "yaml" && !this.input.readOnly, () => [...(this.vars?.keys() ?? [])]);
     this.input.addEventListener("keydown", (event) => {
+      if (event.key === "Backspace" && (event.ctrlKey || event.altKey) && !this.input.readOnly) {
+        const { selectionStart: start, selectionEnd: end, value } = this.input;
+        const lineStart = value.lastIndexOf("\n", start - 1) + 1;
+        if (start === end && start > lineStart && /^\s+$/.test(value.slice(lineStart, start))) {
+          event.preventDefault();
+          this.input.setSelectionRange(lineStart, start);
+          if (!document.execCommand("delete")) {
+            this.input.setRangeText("", lineStart, start, "end");
+            this.input.dispatchEvent(new Event("input"));
+          }
+          return;
+        }
+      }
       if (event.key === "Tab" && !event.shiftKey && !this.input.readOnly) {
         event.preventDefault();
         this.input.setRangeText("  ", this.input.selectionStart, this.input.selectionEnd, "end");
@@ -272,7 +287,7 @@ export class Editor {
         parts.push(`<span class="t-hint warn">${escapeHtml(names.size > 1 ? `${name} not set` : "not set")}</span>`);
       }
     }
-    return { html: parts.length ? `<span class="t-gap">  </span>${parts.join(" ")}` : "", warn };
+    return { html: parts.length ? `<span class="t-gap">  </span><span class="t-hints">${parts.join("")}</span>` : "", warn };
   }
 
   private render() {

@@ -57,7 +57,7 @@ function mount(el: HTMLElement) {
   el.classList.add("files");
   el.innerHTML = `
     <div class="files-list">
-      <div class="files-crumbs"></div>
+      <div class="files-crumbs" data-mid></div>
       <div class="files-tools">
         <button type="button" class="button" data-act="new-file">New file</button>
         <button type="button" class="button" data-act="new-dir">New folder</button>
@@ -66,8 +66,8 @@ function mount(el: HTMLElement) {
     </div>
     <div class="files-editor">
       <div class="files-head">
-        <span class="files-name muted">No file open</span>
-        <span class="files-dirty" hidden>modified</span>
+        <span class="files-name muted" data-mid>No file open</span>
+        <span class="files-dirty" title="Unsaved changes" aria-label="Unsaved changes" hidden></span>
         <button type="button" class="button primary" data-act="save" disabled>Save</button>
       </div>
       <div class="files-text"></div>
@@ -120,7 +120,6 @@ function mount(el: HTMLElement) {
   const confirmLeave = async () => !dirty || window.ask({ title: "Discard unsaved changes?", confirm: "Discard" });
 
   crumbs.textContent = abs ? disk(root) : root || "/";
-  crumbs.title = crumbs.textContent;
 
   const rows = (dir: string, depth: number): string =>
     (children.get(dir) ?? [])
@@ -131,9 +130,8 @@ function mount(el: HTMLElement) {
         const cls = ["entry", isOpen ? "expanded" : "", !isDir && path === open ? "open" : "", isDir && path === selected ? "selected" : ""].filter(Boolean).join(" ");
         const actions = `<span class="actions"><button type="button" data-ren="${escapeHtml(path)}" title="Rename" aria-label="Rename">${icon("pencil", 14)}</button><button type="button" data-del="${escapeHtml(path)}" title="Delete" aria-label="Delete">${icon("trash", 14)}</button></span>`;
         const row = `<div class="${cls}" style="--depth:${depth}" data-${isDir ? "dir" : "file"}="${escapeHtml(path)}">
-          <span class="chev">${isDir ? icon("chevron") : ""}</span>
-          <span class="glyph" data-kind="${kind(e.name, isDir)}">${icon(isDir ? "folder" : "file")}</span>
-          <span class="name">${escapeHtml(e.name)}</span>
+          <span class="glyph" data-kind="${kind(e.name, isDir)}">${icon(isDir ? (isOpen ? "folder-open" : "folder") : "file")}</span>
+          <span class="name" data-mid>${escapeHtml(e.name)}</span>
           ${isDir ? "" : `<span class="size">${size(e.size)}</span>`}
           ${actions}
         </div>`;

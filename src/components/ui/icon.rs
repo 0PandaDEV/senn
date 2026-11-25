@@ -18,6 +18,7 @@ pub enum Icon {
     Update,
     Trash,
     Folder,
+    FolderOpen,
     File,
     Plus,
     X,
@@ -40,7 +41,7 @@ pub enum Icon {
     Network,
 }
 
-pub const ALL: [Icon; 30] = [
+pub const ALL: [Icon; 31] = [
     Icon::Server,
     Icon::Layers,
     Icon::Box,
@@ -51,6 +52,7 @@ pub const ALL: [Icon; 30] = [
     Icon::Update,
     Icon::Trash,
     Icon::Folder,
+    Icon::FolderOpen,
     Icon::File,
     Icon::Plus,
     Icon::X,
@@ -86,6 +88,7 @@ impl Icon {
             Icon::Update => "update",
             Icon::Trash => "trash",
             Icon::Folder => "folder",
+            Icon::FolderOpen => "folder-open",
             Icon::File => "file",
             Icon::Plus => "plus",
             Icon::X => "x",
@@ -121,6 +124,7 @@ impl Icon {
             Icon::Update => iconify_icon!("lucide:circle-arrow-up"),
             Icon::Trash => iconify_icon!("lucide:trash-2"),
             Icon::Folder => iconify_icon!("lucide:folder"),
+            Icon::FolderOpen => iconify_icon!("lucide:folder-open"),
             Icon::File => iconify_icon!("lucide:file"),
             Icon::Plus => iconify_icon!("lucide:plus"),
             Icon::X => iconify_icon!("lucide:x"),

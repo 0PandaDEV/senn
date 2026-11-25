@@ -29,10 +29,7 @@
     .files-crumbs {
       display: block;
       white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      direction: rtl;
-      text-align: left;
+      overflow-x: clip;
       padding: var(--space-8);
       border-bottom: 1px solid var(--border);
       font-size: 0.78125rem;
@@ -74,44 +71,36 @@
 
       .entry {
         display: grid;
-        grid-template-columns: 16px 16px minmax(0, 1fr) auto;
+        grid-template-columns: 16px minmax(0, 1fr) auto;
         align-items: center;
         gap: var(--space-8);
-        min-height: var(--control-h);
-        padding: var(--pad-tab);
-        padding-left: calc(var(--space-12) + var(--depth, 0) * var(--space-16));
+        height: var(--control-h);
+        padding: 0 var(--space-8);
+        padding-left: calc(var(--space-8) + var(--depth, 0) * var(--space-16));
         line-height: 16px;
         border-radius: calc(6px * var(--k));
         color: var(--text-secondary);
         cursor: pointer;
         transition: var(--hover-transition);
 
-        .chev {
-          display: grid;
-          place-items: center;
-          color: var(--text-muted);
-
-          .icon {
-            transition: transform 0.15s;
-          }
-        }
-
-        &.expanded .chev .icon {
-          transform: rotate(90deg);
-        }
-
         &:hover {
           background: var(--element-hover);
           color: var(--text);
 
           .actions {
-            display: flex;
-            align-items: center;
+            visibility: visible;
           }
 
           .size {
-            display: none;
+            visibility: hidden;
           }
+        }
+
+        .size,
+        .actions {
+          grid-column: 3;
+          grid-row: 1;
+          justify-self: end;
         }
 
         &.open {
@@ -160,7 +149,7 @@
         }
 
         .name {
-          overflow: hidden;
+          overflow-x: clip;
           text-overflow: ellipsis;
           white-space: nowrap;
         }
@@ -171,7 +160,8 @@
         }
 
         .actions {
-          display: none;
+          display: flex;
+          visibility: hidden;
           gap: var(--space-4);
           align-items: center;
 
@@ -208,7 +198,8 @@
     }
 
     .files-head {
-      display: flex;
+      display: grid;
+      grid-template-columns: minmax(0, max-content) auto minmax(0, 1fr) auto;
       align-items: center;
       gap: var(--space-8);
       padding: var(--space-8);
@@ -216,16 +207,24 @@
       font-size: 0.78125rem;
 
       .files-name {
-        flex: 1;
+        grid-column: 1;
         min-width: 0;
         white-space: nowrap;
-        overflow: hidden;
+        overflow-x: clip;
         text-overflow: ellipsis;
       }
 
       .files-dirty {
-        color: var(--warn);
-        font-size: 0.75rem;
+        grid-column: 2;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        corner-shape: round;
+        background: var(--warn);
+      }
+
+      .button {
+        grid-column: 4;
       }
     }
 
