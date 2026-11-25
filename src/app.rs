@@ -78,6 +78,7 @@ async fn root(cx: &Cx, slot: Slot<'_>) -> Result<impl View> {
             <head>
                 topcoat::metadata::tags()
                 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+                <link rel="apple-touch-icon" href="/icon.png">
                 link(font: COMMIT_MONO)
                 for style in STYLES {
                     <link rel="stylesheet" href=(format!("/styles/{style}.css"))>
