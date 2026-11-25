@@ -68,7 +68,7 @@ function morph(from: Node, to: Node) {
     return;
   }
   if ((from instanceof HTMLInputElement || from instanceof HTMLTextAreaElement) && document.activeElement === from) return;
-  const wanted = [...to.childNodes];
+  const wanted = [...to.childNodes].filter((n) => !clientOnly(n));
   let cursor = skip(from.firstChild);
   for (const next of wanted) {
     cursor = skip(cursor);

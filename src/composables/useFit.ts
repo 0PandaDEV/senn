@@ -1,9 +1,5 @@
 const SELECTOR = ".logs, .files, .env-file, .log-picker";
-const jobs = () => {
-  const panel = document.getElementById("jobs");
-  return panel && !panel.hidden ? panel.offsetHeight + 8 : 0;
-};
-const BOTTOM = () => (matchMedia("(max-width: 860px)").matches ? 16 : 24) + jobs();
+const BOTTOM = () => (matchMedia("(max-width: 860px)").matches ? 8 : 16);
 
 let queued = false;
 

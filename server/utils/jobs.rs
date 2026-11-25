@@ -82,6 +82,8 @@ fn update(id: u64, f: impl FnOnce(&mut Job)) {
     }
 }
 
+const DONE_TTL: std::time::Duration = std::time::Duration::from_secs(60);
+
 pub fn start(title: String, key: String, mut handle: StreamHandle) -> u64 {
     let id = ((state::now() as u64) << 16) | (NEXT.fetch_add(1, Ordering::Relaxed) & 0xffff);
     let job = Job {
@@ -131,6 +133,10 @@ pub fn start(title: String, key: String, mut handle: StreamHandle) -> u64 {
         emit(
             json!({ "t": "job", "ev": "end", "id": id, "ok": ok, "error": error, "title": title }),
         );
+        if ok {
+            tokio::time::sleep(DONE_TTL).await;
+            dismiss(id);
+        }
     });
     id
 }

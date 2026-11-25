@@ -39,6 +39,7 @@ function apply() {
   }
   for (const el of document.querySelectorAll("[data-busy]")) if (!want.has(el)) el.removeAttribute("data-busy");
   for (const el of want) if (!el.hasAttribute("data-busy")) el.setAttribute("data-busy", "");
+  badge();
 }
 
 function activeId(): number | null {
@@ -57,12 +58,33 @@ function select(id: number) {
   tab(id)?.scrollIntoView({ block: "nearest", inline: "nearest" });
 }
 
-function expand() {
-  const panel = root();
-  if (panel?.hasAttribute("data-collapsed")) {
-    panel.removeAttribute("data-collapsed");
-    remember("senn_jobs_collapsed", null);
+function badge() {
+  const list = tabs();
+  const states = list.map((t) => t.dataset.state);
+  const running = states.filter((s) => s === "running").length;
+  const state = running ? "running" : states.includes("failed") ? "failed" : "done";
+  const open = root()?.hasAttribute("data-open") ?? false;
+  const failed = states.filter((s) => s === "failed").length;
+  const count = String(running || failed || list.length);
+  const text = running ? "Running" : failed ? "Failed" : "Finished";
+  for (const el of document.querySelectorAll<HTMLElement>(".activity-toggle")) {
+    if (el.hidden !== (list.length === 0)) el.hidden = list.length === 0;
+    if (el.dataset.state !== state) el.dataset.state = state;
+    if (el.getAttribute("aria-expanded") !== String(open)) el.setAttribute("aria-expanded", String(open));
+    const num = el.querySelector<HTMLElement>(".num");
+    if (num && num.textContent !== count) num.textContent = count;
+    const label = el.querySelector<HTMLElement>(".activity-label");
+    if (label && label.textContent !== text) label.textContent = text;
+    const title = `${text} · ${list.length} job${list.length === 1 ? "" : "s"}`;
+    if (el.title !== title) el.title = title;
   }
+}
+
+function setOpen(open: boolean) {
+  const panel = root();
+  if (!panel) return;
+  panel.toggleAttribute("data-open", open && !panel.hidden);
+  badge();
 }
 
 function removeTab(id: number) {
@@ -76,7 +98,10 @@ function removeTab(id: number) {
   const rest = tabs();
   const panel = root();
   if (!rest.length) {
-    if (panel) panel.hidden = true;
+    if (panel) {
+      panel.hidden = true;
+      panel.removeAttribute("data-open");
+    }
   } else if (wasActive) {
     select(Number(rest[Math.min(index, rest.length - 1)]!.dataset.jobId));
   }
@@ -100,14 +125,14 @@ function ensure(id: number, title: string, key: string, state: State) {
     t.dataset.jobId = String(id);
     t.innerHTML = `<button type="button" class="jobs-tab-main" role="tab" data-job-select="${id}"><i class="jobs-dot"></i><span class="jobs-tab-title"></span></button><button type="button" class="jobs-tab-x" data-job-dismiss="${id}" aria-label="Close">${icon("x", 12)}</button>`;
     t.querySelector(".jobs-tab-title")!.textContent = title;
-    bar.append(t);
+    bar.prepend(t);
     const pre = document.createElement("pre");
     pre.className = "jobs-body";
     pre.dataset.jobId = String(id);
     pre.hidden = true;
     body.append(pre);
     const extra = tabs().filter((e) => e.dataset.state !== "running" && e !== t);
-    while (tabs().length > MAX_TABS && extra.length) removeTab(Number(extra.shift()!.dataset.jobId));
+    while (tabs().length > MAX_TABS && extra.length) removeTab(Number(extra.pop()!.dataset.jobId));
   }
   t.dataset.key = key;
   t.dataset.state = state;
@@ -185,7 +210,6 @@ function onEvent(message: { t: string; [key: string]: unknown }) {
       awaiting.delete(key);
     }
     pending.delete(key);
-    expand();
     select(id);
     apply();
     return;
@@ -216,6 +240,7 @@ function onEvent(message: { t: string; [key: string]: unknown }) {
       }
       window.toast(done, "success");
     }
+    if (own.has(id) && !ok) window.toast(`${title} failed${message.error ? `: ${message.error as string}` : ""}`, "error");
     void window.revalidate();
   }
 }
@@ -266,12 +291,19 @@ document.addEventListener("click", async (event) => {
     dismiss(Number(close.dataset.jobDismiss));
     return;
   }
-  if (target.closest("#jobs-toggle")) {
-    const panel = root();
-    if (!panel) return;
-    const collapsed = panel.toggleAttribute("data-collapsed");
-    remember("senn_jobs_collapsed", collapsed ? "1" : null);
+  if (target.closest("[data-jobs-open]")) {
+    setOpen(!root()?.hasAttribute("data-open"));
+    return;
   }
+  if (target.closest("[data-jobs-close]")) {
+    setOpen(false);
+    return;
+  }
+  if (root()?.hasAttribute("data-open") && !target.closest("#jobs")) setOpen(false);
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && root()?.hasAttribute("data-open")) setOpen(false);
 });
 
 function middle(event: MouseEvent): HTMLElement | null {
@@ -291,7 +323,7 @@ document.addEventListener("auxclick", (event) => {
 });
 
 new MutationObserver((mutations) => {
-  if (mutations.every((m) => (m.target as Element).closest?.("#jobs"))) return;
+  if (mutations.every((m) => (m.target as Element).closest?.("#jobs, .activity-toggle"))) return;
   apply();
 }).observe(document.body, { childList: true, subtree: true });
 

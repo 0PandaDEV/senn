@@ -109,27 +109,14 @@ body {
   }
 }
 
-:root {
-  --jobs-bar-h: 49px;
-  --jobs-body-h: min(36vh, 280px);
-}
-
-body {
-  --jobs-h: 0px;
-  --jobs-reserve: 0px;
-
-  &:has(#jobs:not([hidden])) {
-    --jobs-h: calc(var(--jobs-bar-h) + var(--jobs-body-h));
-    --jobs-reserve: calc(var(--jobs-h) + var(--space-8));
-  }
-
-  &:has(#jobs:not([hidden])[data-collapsed]) {
-    --jobs-h: var(--jobs-bar-h);
-  }
-}
 
 html {
   scrollbar-gutter: stable;
+  scrollbar-color: color-mix(in srgb, var(--accent) 65%, transparent) transparent;
+}
+
+* {
+  scrollbar-width: thin;
 }
 
 body {
@@ -218,17 +205,13 @@ select {
   width: min(360px, calc(100vw - 2 * var(--space-16)));
   pointer-events: none;
 
-  body:has(#jobs:not([hidden])) & {
-    bottom: calc(var(--jobs-h, 0px) + var(--space-16) + var(--space-8) + env(safe-area-inset-bottom, 0px));
-  }
-
   .toast {
     display: grid;
     grid-template-columns: 16px minmax(0, 1fr) auto;
     align-items: start;
     gap: var(--space-8);
     width: 100%;
-    padding: var(--space-8) var(--space-8) var(--space-8) var(--space-12);
+    padding: var(--space-8);
     background: var(--element);
     border: 1px solid var(--border-hover);
     border-radius: calc(6px * var(--k));

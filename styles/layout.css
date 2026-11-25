@@ -147,19 +147,18 @@
     flex-direction: column;
     gap: var(--space-4);
 
+    a > span:not(.num) {
+      flex: 1;
+      min-width: 0;
+    }
+
     .num {
-      margin-left: auto;
       flex: none;
       font-weight: 400;
       font-size: 0.75rem;
       color: var(--text-muted);
     }
 
-    &.sub {
-      margin: 0 0 var(--space-4) var(--space-16);
-      padding-left: var(--space-8);
-      border-left: 1px solid var(--border);
-    }
 
     a {
       position: relative;
@@ -230,11 +229,10 @@
 .main {
   min-width: 0;
   padding: var(--space-16);
-  padding-bottom: calc(var(--space-16) + var(--space-8) + var(--jobs-reserve, 0px));
 
   @media (max-width: 860px) {
     padding: var(--space-8);
-    padding-bottom: calc(var(--space-16) + var(--jobs-reserve, 0px));
+    padding-bottom: calc(var(--space-8) + var(--safe-b));
   }
 
   > div,
@@ -660,68 +658,134 @@
   }
 }
 
+.jobs-dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  corner-shape: round;
+  background: var(--text-muted);
+}
+
+[data-state="done"] > .jobs-dot,
+[data-state="done"] > button > .jobs-dot {
+  background: var(--ok);
+}
+
+[data-state="failed"] > .jobs-dot,
+[data-state="failed"] > button > .jobs-dot {
+  background: var(--bad);
+}
+
+[data-state="running"] > .jobs-dot,
+[data-state="running"] > button > .jobs-dot {
+  box-sizing: border-box;
+  background: none;
+  border: 2px solid color-mix(in srgb, var(--warn) 30%, transparent);
+  border-top-color: var(--warn);
+  animation: spin 0.7s linear infinite;
+}
+
+.activity-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  width: 100%;
+  height: var(--control-h);
+  padding: 0 var(--space-16);
+  border: 0;
+  border-radius: calc(6px * var(--k));
+  background: none;
+  color: var(--text-secondary);
+  font: inherit;
+  line-height: 16px;
+  text-align: left;
+  cursor: pointer;
+  transition: var(--hover-transition);
+
+  &:hover,
+  &[aria-expanded="true"] {
+    background: var(--element-hover);
+    color: var(--text);
+  }
+
+  .activity-label {
+    flex: 1;
+  }
+
+  .num {
+    color: var(--text-muted);
+    font-size: 0.75rem;
+  }
+
+  .shell .topbar & {
+    width: auto;
+    padding: 0 var(--space-8);
+
+    .activity-label {
+      display: none;
+    }
+  }
+}
+
 .jobs {
   position: fixed;
-  left: calc(240px + 2 * var(--space-8));
-  right: var(--space-8);
-  bottom: var(--space-8);
-  z-index: 50;
+  top: calc(var(--space-8) + var(--safe-t));
+  right: max(var(--space-8), var(--safe-r));
+  bottom: calc(var(--space-8) + var(--safe-b));
+  z-index: 70;
   display: flex;
   flex-direction: column;
-  height: var(--jobs-h);
+  width: min(520px, calc(100vw - 2 * var(--space-8)));
   background: var(--background);
   border: 1px solid var(--border-hover);
   border-radius: calc(6px * var(--k));
-  box-shadow: 0 8px 32px #0008;
+  box-shadow: 0 12px 48px #000a;
   overflow: hidden;
+  transform: translateX(calc(100% + 2 * var(--space-8)));
+  visibility: hidden;
+  transition: transform 0.25s cubic-bezier(0.3, 0.7, 0.2, 1), visibility 0s 0.25s;
 
-  @media (max-width: 860px) {
-    left: var(--space-8);
+  &[data-open] {
+    transform: none;
+    visibility: visible;
+    transition: transform 0.25s cubic-bezier(0.3, 0.7, 0.2, 1);
   }
 
   &[hidden] {
     display: none;
   }
 
-  .jobs-bar {
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+
+    &[data-open] {
+      transition: none;
+    }
+  }
+
+  .jobs-head {
     display: flex;
     align-items: center;
     gap: var(--space-8);
     flex: none;
-    height: var(--jobs-bar-h);
-    padding: 0 var(--space-8);
+    padding: var(--space-8) var(--space-8) var(--space-8) var(--space-16);
     border-bottom: 1px solid var(--border);
     background: var(--element);
 
-    .icon-button {
-      flex: none;
-
-      .icon {
-        transform: rotate(90deg);
-        transition: transform 0.15s;
-      }
-    }
-  }
-
-  &[data-collapsed] {
-    .jobs-bar {
-      border-bottom: 0;
-
-      .icon-button .icon {
-        transform: rotate(-90deg);
-      }
-    }
-
-    .jobs-panes {
-      display: none;
+    h2 {
+      flex: 1;
+      font-size: 0.875rem;
     }
   }
 
   .jobs-tabs {
     display: flex;
-    flex: 1;
+    flex: none;
     gap: var(--space-4);
     min-width: 0;
+    padding: var(--space-8);
+    border-bottom: 1px solid var(--border);
     overflow-x: auto;
     scrollbar-width: none;
   }
@@ -731,6 +795,7 @@
     flex: none;
     align-items: center;
     max-width: 260px;
+    padding-right: var(--space-4);
     border-radius: calc(6px * var(--k));
     color: var(--text-muted);
     transition: var(--hover-transition);
@@ -759,12 +824,12 @@
       align-items: center;
       gap: var(--space-8);
       min-width: 0;
-      min-height: var(--control-h);
-      padding: 0 var(--space-4) 0 var(--space-12);
+      height: var(--control-h);
+      padding: 0 var(--space-4) 0 var(--space-16);
     }
 
     .jobs-tab-title {
-      overflow: hidden;
+      overflow-x: clip;
       text-overflow: ellipsis;
       white-space: nowrap;
     }
@@ -775,7 +840,6 @@
       flex: none;
       width: 24px;
       height: 24px;
-      margin-right: var(--space-4);
       border-radius: calc(6px * var(--k));
       color: var(--text-muted);
 
@@ -784,34 +848,6 @@
         color: var(--text);
       }
     }
-  }
-
-  .jobs-dot {
-    flex: none;
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    corner-shape: round;
-    background: var(--text-muted);
-  }
-
-  .jobs-tab[data-state="done"] .jobs-dot {
-    background: var(--ok);
-  }
-
-  .jobs-tab[data-state="failed"] .jobs-dot {
-    background: var(--bad);
-  }
-
-  .jobs-tab[data-state="running"] .jobs-dot {
-    box-sizing: border-box;
-    width: 12px;
-    height: 12px;
-    margin: -2px;
-    background: none;
-    border: 2px solid color-mix(in srgb, var(--warn) 30%, transparent);
-    border-top-color: var(--warn);
-    animation: spin 0.7s linear infinite;
   }
 
   .jobs-panes {
@@ -827,6 +863,7 @@
     overflow-anchor: none;
     padding: var(--space-16);
     color: var(--text-secondary);
+    font-size: 0.78125rem;
     white-space: pre-wrap;
     word-break: break-word;
 
@@ -862,8 +899,10 @@
   }
 }
 
-.topbar .select {
-  margin-left: auto;
+.shell .topbar .brand {
+  flex: 1;
+  height: var(--control-h);
+  padding-block: 0;
 }
 
 .host-card.static .host-top strong,
@@ -897,8 +936,20 @@ img.avatar {
   clip-path: circle(50%);
 }
 
+.sidebar-main {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  gap: var(--space-4);
+}
+
+.sidebar-foot {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}
+
 .sidebar .me {
-  margin-top: auto;
   display: flex;
   align-items: center;
   gap: var(--space-4);
@@ -912,8 +963,14 @@ img.avatar {
     flex: 1;
     min-width: 0;
     min-height: var(--control-h);
-    padding: 2px var(--space-8) 2px 2px;
-    border-radius: calc(6px * var(--k));
+    padding: var(--space-4) var(--space-8) var(--space-4) var(--space-4);
+
+    .avatar {
+      width: 24px;
+      height: 24px;
+    }
+    border-radius: calc(var(--control-h) / 2) calc(6px * var(--k)) calc(6px * var(--k)) calc(var(--control-h) / 2);
+    corner-shape: round squircle squircle round;
     color: var(--text);
     transition: var(--hover-transition);
 

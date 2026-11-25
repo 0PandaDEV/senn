@@ -71,60 +71,73 @@ pub async fn shell(
                 if !current.is_empty() {
                     host_select(current: current.clone(), variant: "right")
                 }
+                <button type="button" class="activity-toggle" data-jobs-open="" data-client="" aria-label="Activity" hidden=(true)>
+                    <i class="jobs-dot"></i>
+                    <span class="num"></span>
+                </button>
             </header>
             <div class="scrim" data-menu-close=""></div>
             <aside class="sidebar" data-live="side">
-                <a class="brand" (nav(cx, "/"))>
-                    <img class="brand-logo" src="/logo.svg" width="19" height="16" alt="">
-                    <span>"Senn"</span>
-                </a>
-                <nav class="nav">
-                    <a (nav(cx, "/")) class=(if section == "overview" { "active" } else { "" })>
-                        icon(name: Icon::Home)
-                        "Overview"
+                <div class="sidebar-main">
+                    <a class="brand" (nav(cx, "/"))>
+                        <img class="brand-logo" src="/logo.svg" width="19" height="16" alt="">
+                        <span>"Senn"</span>
                     </a>
-                    <a (nav(cx, "/agents")) class=(if section == "agents" { "active" } else { "" })>
-                        icon(name: Icon::Server)
-                        "Agents"
-                    </a>
-                </nav>
-                <div class="label">"Hosts"</div>
-                <nav class="nav hosts">
-                    for (id, name, online) in rows {
-                        <a (nav(cx, format!("/hosts/{id}"))) class=(if host == id && tab == "metrics" { "active" } else { "" })>
-                            <i class=(if online { "dot ok" } else { "dot off" })></i>
-                            <span>(name)</span>
-                        </a>
-                    }
-                    if agents.is_empty() {
-                        <p class="hint">"No agents yet"</p>
-                    }
-                </nav>
-                if !current.is_empty() {
-                    <div class="label">(current_name)</div>
                     <nav class="nav">
-                        for (key, label, glyph, count) in tabs {
-                            <a (nav(cx, format!("/hosts/{current}/{key}"))) class=(if host == current && tab == key { "active" } else { "" })>
-                                icon(name: glyph)
-                                <span>(label)</span>
-                                if let Some(n) = count {
-                                    <b class="num">(n)</b>
-                                }
+                        <a (nav(cx, "/")) class=(if section == "overview" { "active" } else { "" })>
+                            icon(name: Icon::Home)
+                            "Overview"
+                        </a>
+                        <a (nav(cx, "/agents")) class=(if section == "agents" { "active" } else { "" })>
+                            icon(name: Icon::Server)
+                            "Agents"
+                        </a>
+                    </nav>
+                    <div class="label">"Hosts"</div>
+                    <nav class="nav hosts">
+                        for (id, name, online) in rows {
+                            <a (nav(cx, format!("/hosts/{id}"))) class=(if host == id && tab == "metrics" { "active" } else { "" })>
+                                <i class=(if online { "dot ok" } else { "dot off" })></i>
+                                <span>(name)</span>
                             </a>
                         }
+                        if agents.is_empty() {
+                            <p class="hint">"No agents yet"</p>
+                        }
                     </nav>
-                }
-                <div class="me">
-                    <a class="me-profile" (nav(cx, "/settings")) title="Account and settings">
-                        avatar(profile: me.clone())
-                        <span>(me.name())</span>
-                    </a>
-                    <a class=(if section == "settings" { "icon-button active" } else { "icon-button" }) (nav(cx, "/settings")) title="Settings" aria-label="Settings">
-                        icon(name: Icon::Settings)
-                    </a>
-                    <button type="button" class="icon-button" data-api="/api/auth/logout" data-redirect="/login" title="Sign out" aria-label="Sign out">
-                        icon(name: Icon::Logout)
+                    if !current.is_empty() {
+                        <div class="label">(current_name)</div>
+                        <nav class="nav">
+                            for (key, label, glyph, count) in tabs {
+                                <a (nav(cx, format!("/hosts/{current}/{key}"))) class=(if host == current && tab == key { "active" } else { "" })>
+                                    icon(name: glyph)
+                                    <span>(label)</span>
+                                    if let Some(n) = count {
+                                        <b class="num">(n)</b>
+                                    }
+                                </a>
+                            }
+                        </nav>
+                    }
+                </div>
+                <div class="sidebar-foot">
+                    <button type="button" class="activity-toggle" data-jobs-open="" data-client="" hidden=(true)>
+                        <i class="jobs-dot"></i>
+                        <span class="activity-label">"Activity"</span>
+                        <span class="num"></span>
                     </button>
+                    <div class="me">
+                        <a class="me-profile" (nav(cx, "/settings")) title="Account and settings">
+                            avatar(profile: me.clone())
+                            <span>(me.name())</span>
+                        </a>
+                        <a class=(if section == "settings" { "icon-button active" } else { "icon-button" }) (nav(cx, "/settings")) title="Settings" aria-label="Settings">
+                            icon(name: Icon::Settings)
+                        </a>
+                        <button type="button" class="icon-button" data-api="/api/auth/logout" data-redirect="/login" title="Sign out" aria-label="Sign out">
+                            icon(name: Icon::Logout)
+                        </button>
+                    </div>
                 </div>
             </aside>
             <main class="main">(child)</main>

@@ -25,13 +25,15 @@ pub async fn jobs_panel(cx: &Cx) -> Result<impl View> {
         .find(|j| Some(j.id) == wanted)
         .or(list.last())
         .map(|j| j.id);
-    let collapsed = (read_cookie(cx, "senn_jobs_collapsed").as_deref() == Some("1")).then_some("");
     let empty = list.is_empty();
     Ok(view! {
-        <div class="jobs" id="jobs" hidden=(empty) data-collapsed=(collapsed)>
-            <div class="jobs-bar">
-                <div class="jobs-tabs" id="jobs-tabs" role="tablist">
-                    for j in list.clone() {
+        <aside class="jobs" id="jobs" hidden=(empty) aria-label="Activity">
+            <div class="jobs-head">
+                <h2>"Activity"</h2>
+                <button type="button" class="icon-button" data-jobs-close="" aria-label="Close">icon(name: Icon::X)</button>
+            </div>
+            <div class="jobs-tabs" id="jobs-tabs" role="tablist">
+                    for j in list.iter().rev().cloned() {
                         <div class="jobs-tab" data-job-id=(j.id.to_string()) data-key=(j.key.clone()) data-state=(j.state) data-active=((Some(j.id) == active).then_some(""))>
                             <button type="button" class="jobs-tab-main" role="tab" data-job-select=(j.id.to_string())>
                                 <i class="jobs-dot"></i>
@@ -40,14 +42,12 @@ pub async fn jobs_panel(cx: &Cx) -> Result<impl View> {
                             <button type="button" class="jobs-tab-x" data-job-dismiss=(j.id.to_string()) aria-label="Close">icon(name: Icon::X, size: 12)</button>
                         </div>
                     }
-                </div>
-                <button type="button" class="icon-button" id="jobs-toggle" aria-label="Toggle output">icon(name: Icon::Chevron, size: 14)</button>
             </div>
             <div class="jobs-panes" id="jobs-panes">
                 for j in list {
                     <pre class="jobs-body" data-job-id=(j.id.to_string()) hidden=(Some(j.id) != active)>(j.text.clone())</pre>
                 }
             </div>
-        </div>
+        </aside>
     })
 }
