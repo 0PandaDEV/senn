@@ -107,6 +107,19 @@ pub async fn user() -> Option<UserRecord> {
         })
 }
 
+pub async fn set_password(password_hash: &str) -> bool {
+    sqlx::query("UPDATE account SET password_hash = ? WHERE id = 1")
+        .bind(password_hash)
+        .execute(pool())
+        .await
+        .map(|r| r.rows_affected() == 1)
+        .unwrap_or(false)
+}
+
+pub async fn clear_sessions() {
+    let _ = sqlx::query("DELETE FROM session").execute(pool()).await;
+}
+
 pub async fn has_user() -> bool {
     user().await.is_some()
 }

@@ -41,6 +41,16 @@ pub async fn hash_password(password: String) -> Result<String, String> {
         .map_err(|e| e.to_string())
 }
 
+pub async fn verify_password(password: String) -> bool {
+    let Some(user) = state::user().await else {
+        return false;
+    };
+    let hash = user.password_hash;
+    tokio::task::spawn_blocking(move || bcrypt::verify(password, &hash).unwrap_or(false))
+        .await
+        .unwrap_or(false)
+}
+
 pub async fn verify_login(username: String, password: String) -> bool {
     let Some(user) = state::user().await else {
         return false;

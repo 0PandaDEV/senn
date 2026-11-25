@@ -84,6 +84,7 @@ pub async fn settings(cx: &Cx) -> Result<impl View> {
                     </div>
                     <button type="submit" form="settings-form" class="button primary">"Save"</button>
                 </header>
+                <div class="settings-layout">
                 <div class="settings">
                 <section class="settings-card account">
                     <header class="settings-head">
@@ -92,12 +93,14 @@ pub async fn settings(cx: &Cx) -> Result<impl View> {
                             <p>"How you show up in the sidebar."</p>
                         </div>
                     </header>
+                    <div class="settings-body">
                     <div class="account-row">
-                        <div class="account-avatar" data-avatar="">
-                            avatar(profile: me.clone(), large: true)
-                            <div class="account-avatar-actions">
+                        <div class="field">
+                            <span>"Picture"</span>
+                            <div class="account-avatar" data-avatar="">
+                                avatar(profile: me.clone())
                                 <label class="button">
-                                    "Upload picture"
+                                    "Upload"
                                     <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" data-avatar-file="" hidden=(true)>
                                 </label>
                                 if me.avatar_version.is_some() {
@@ -113,6 +116,22 @@ pub async fn settings(cx: &Cx) -> Result<impl View> {
                             <button type="submit" class="button">"Save name"</button>
                         </form>
                     </div>
+                    <form class="account-password" data-api="/api/account/password" data-success="Password changed, other sessions were signed out" data-reload="">
+                        <label class="field">
+                            <span>"Current password"</span>
+                            <input type="password" name="current" autocomplete="current-password" required=(true)>
+                        </label>
+                        <label class="field">
+                            <span>"New password " <small>"at least 10 characters"</small></span>
+                            <input type="password" name="password" autocomplete="new-password" minlength="10" required=(true)>
+                        </label>
+                        <label class="field">
+                            <span>"Repeat new password"</span>
+                            <input type="password" name="confirm" autocomplete="new-password" minlength="10" required=(true)>
+                        </label>
+                        <button type="submit" class="button">"Change password"</button>
+                    </form>
+                    </div>
                 </section></div>
                 <form id="settings-form" class="settings" data-api="/api/settings/notify" data-success="Notification settings saved" data-settings="">
                     <section class="settings-card">
@@ -126,6 +145,7 @@ pub async fn settings(cx: &Cx) -> Result<impl View> {
                                 <span></span>
                             </label>
                         </header>
+                        <div class="settings-body">
                         <input type="hidden" name="targets" value=(cfg.targets.clone())>
                         <div class="targets" data-targets=""></div>
                         <div class="targets-actions">
@@ -151,14 +171,16 @@ pub async fn settings(cx: &Cx) -> Result<impl View> {
                                 }
                             </dl>
                         </details>
+                        </div>
                     </section>
-                    <section class="settings-card">
+                    <section class="settings-card events-card">
                         <header class="settings-head">
                             <div>
                                 <h2>"Events"</h2>
                                 <p>"What you want to hear about."</p>
                             </div>
                         </header>
+                        <div class="settings-body">
                         <div class="events">
                             for (key, label, desc, checked) in rows {
                                 <label class="event">
@@ -170,8 +192,10 @@ pub async fn settings(cx: &Cx) -> Result<impl View> {
                                 </label>
                             }
                         </div>
+                        </div>
                     </section>
                 </form>
+                </div>
             </div>
         )
     })
