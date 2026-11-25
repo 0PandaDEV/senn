@@ -169,6 +169,13 @@ select {
   color: inherit;
 }
 
+*,
+*:focus,
+*:focus-visible {
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
 [hidden] {
   display: none !important;
 }
