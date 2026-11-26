@@ -69,7 +69,8 @@ async fn custom(t: Target, m: Message, format: Format) -> Outcome {
         match format {
             Format::Json => req.json(&fields.into_iter().collect::<Map<_, _>>()),
             Format::Form => {
-                let f: Vec<(String, String)> = fields.iter().map(|(k, v)| (k.clone(), plain(v))).collect();
+                let f: Vec<(String, String)> =
+                    fields.iter().map(|(k, v)| (k.clone(), plain(v))).collect();
                 req.form(&f)
             }
             Format::Xml => {

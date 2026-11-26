@@ -4,10 +4,10 @@ mod composables;
 mod layouts;
 mod pages;
 
-#[path = "../shared/proto.rs"]
-mod proto;
 #[path = "../shared/cron.rs"]
 mod cron;
+#[path = "../shared/proto.rs"]
+mod proto;
 #[path = "../server/mod.rs"]
 mod server;
 

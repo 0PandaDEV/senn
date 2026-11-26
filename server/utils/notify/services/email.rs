@@ -59,13 +59,21 @@ pub async fn send(t: Target, m: Message) -> Outcome {
         (Some(h), _) => (
             h.to_string(),
             if t.secure() { 587 } else { 25 },
-            if t.secure() { Mode::StartTls } else { Mode::Plain },
+            if t.secure() {
+                Mode::StartTls
+            } else {
+                Mode::Plain
+            },
         ),
         (None, Some((h, p, mode))) => (h.to_string(), p, mode),
         (None, None) => (
             t.host.clone(),
             if t.secure() { 587 } else { 25 },
-            if t.secure() { Mode::StartTls } else { Mode::Plain },
+            if t.secure() {
+                Mode::StartTls
+            } else {
+                Mode::Plain
+            },
         ),
     };
     let mode = match t.q("mode").map(str::to_ascii_lowercase).as_deref() {
@@ -105,14 +113,14 @@ pub async fn send(t: Target, m: Message) -> Outcome {
     for addr in t.q("bcc").map(split).unwrap_or_default() {
         builder = builder.bcc(mailbox(&addr)?);
     }
-    let mail = builder
-        .body(m.text())
-        .map_err(|e| format!("email: {e}"))?;
+    let mail = builder.body(m.text()).map_err(|e| format!("email: {e}"))?;
 
     let transport = match mode {
         Mode::Tls => AsyncSmtpTransport::<Tokio1Executor>::relay(&smtp),
         Mode::StartTls => AsyncSmtpTransport::<Tokio1Executor>::starttls_relay(&smtp),
-        Mode::Plain => Ok(AsyncSmtpTransport::<Tokio1Executor>::builder_dangerous(&smtp)),
+        Mode::Plain => Ok(AsyncSmtpTransport::<Tokio1Executor>::builder_dangerous(
+            &smtp,
+        )),
     }
     .map_err(|e| format!("email: {e}"))?;
     let mut transport = transport.port(port).timeout(Some(Duration::from_secs(20)));

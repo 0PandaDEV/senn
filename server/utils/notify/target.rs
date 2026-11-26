@@ -141,7 +141,8 @@ mod tests {
 
     #[test]
     fn parses_parts() {
-        let t = parse("matrixs://bot:p%40ss@matrix.org:8448/#ops:matrix.org/@me?Mode=x&+X-Key=1").unwrap();
+        let t = parse("matrixs://bot:p%40ss@matrix.org:8448/#ops:matrix.org/@me?Mode=x&+X-Key=1")
+            .unwrap();
         assert_eq!(t.scheme, "matrixs");
         assert_eq!(t.user.as_deref(), Some("bot"));
         assert_eq!(t.pass.as_deref(), Some("p@ss"));

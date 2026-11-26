@@ -132,9 +132,11 @@ pub async fn bark(t: Target, m: Message) -> Outcome {
     if keys.is_empty() {
         return Err("bark URL is missing a device key".into());
     }
-    let level = t
-        .q("level")
-        .unwrap_or(if m.priority >= 4 { "timeSensitive" } else { "active" });
+    let level = t.q("level").unwrap_or(if m.priority >= 4 {
+        "timeSensitive"
+    } else {
+        "active"
+    });
     for key in keys {
         let mut body = json!({
             "device_key": key,
@@ -146,7 +148,17 @@ pub async fn bark(t: Target, m: Message) -> Outcome {
         if let Some(i) = t.q("icon").map(String::from).or_else(|| m.icon()) {
             body["icon"] = i.into();
         }
-        for k in ["sound", "badge", "call", "image", "volume", "isArchive", "copy", "autoCopy", "subtitle"] {
+        for k in [
+            "sound",
+            "badge",
+            "call",
+            "image",
+            "volume",
+            "isArchive",
+            "copy",
+            "autoCopy",
+            "subtitle",
+        ] {
             if let Some(v) = t.q(k) {
                 body[k] = v.into();
             }
@@ -202,7 +214,12 @@ pub async fn pushsafer(t: Target, m: Message) -> Outcome {
         ("m", m.body.clone()),
         ("d", device),
     ];
-    for (key, q) in [("s", "sound"), ("v", "vibration"), ("i", "icon"), ("pr", "priority")] {
+    for (key, q) in [
+        ("s", "sound"),
+        ("v", "vibration"),
+        ("i", "icon"),
+        ("pr", "priority"),
+    ] {
         if let Some(v) = t.q(q) {
             form.push((key, v.to_string()));
         }

@@ -116,7 +116,11 @@ impl Cron {
         let limit = dt.checked_add(400.days()).ok()?;
         while dt < limit {
             if self.months & (1 << dt.month()) == 0 || !self.day_matches(&dt) {
-                dt = dt.date().tomorrow().ok()?.to_datetime(jiff::civil::Time::midnight());
+                dt = dt
+                    .date()
+                    .tomorrow()
+                    .ok()?
+                    .to_datetime(jiff::civil::Time::midnight());
                 continue;
             }
             if self.hours & (1 << dt.hour()) == 0 {
@@ -151,19 +155,34 @@ mod tests {
     use jiff::{ZonedDateTime as Zoned, civil::date, tz::TimeZone};
 
     fn at(y: i16, mo: i8, d: i8, h: i8, mi: i8) -> Zoned {
-        date(y, mo, d).at(h, mi, 0, 0).to_zoned_datetime(TimeZone::UTC).unwrap()
+        date(y, mo, d)
+            .at(h, mi, 0, 0)
+            .to_zoned_datetime(TimeZone::UTC)
+            .unwrap()
     }
 
     #[test]
     fn next() {
         let c = Cron::parse("0 3 * * *").unwrap();
-        assert_eq!(c.next_after(&at(2026, 11, 24, 21, 30)).unwrap(), at(2026, 11, 25, 3, 0));
+        assert_eq!(
+            c.next_after(&at(2026, 11, 24, 21, 30)).unwrap(),
+            at(2026, 11, 25, 3, 0)
+        );
         let c = Cron::parse("*/15 * * * *").unwrap();
-        assert_eq!(c.next_after(&at(2026, 11, 24, 21, 30)).unwrap(), at(2026, 11, 24, 21, 45));
+        assert_eq!(
+            c.next_after(&at(2026, 11, 24, 21, 30)).unwrap(),
+            at(2026, 11, 24, 21, 45)
+        );
         let c = Cron::parse("30 4 * * mon").unwrap();
-        assert_eq!(c.next_after(&at(2026, 11, 24, 21, 30)).unwrap(), at(2026, 11, 30, 4, 30));
+        assert_eq!(
+            c.next_after(&at(2026, 11, 24, 21, 30)).unwrap(),
+            at(2026, 11, 30, 4, 30)
+        );
         let c = Cron::parse("@monthly").unwrap();
-        assert_eq!(c.next_after(&at(2026, 11, 24, 21, 30)).unwrap(), at(2026, 12, 1, 0, 0));
+        assert_eq!(
+            c.next_after(&at(2026, 11, 24, 21, 30)).unwrap(),
+            at(2026, 12, 1, 0, 0)
+        );
         assert!(Cron::parse("61 * * * *").is_err());
         assert!(Cron::parse("* * *").is_err());
     }

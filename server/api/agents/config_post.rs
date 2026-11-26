@@ -47,7 +47,8 @@ pub async fn update(cx: &Cx, Json(body): Json<Value>) -> Result<Response> {
         ("selfUpdateCron", &mut cfg.self_update_cron),
     ] {
         if let Some(text) = body.get(key).and_then(Value::as_str).map(str::trim) {
-            crate::cron::Cron::parse(text).map_err(|e| plain(400, &format!("Schedule {text}: {e}")))?;
+            crate::cron::Cron::parse(text)
+                .map_err(|e| plain(400, &format!("Schedule {text}: {e}")))?;
             *slot = text.to_string();
         }
     }

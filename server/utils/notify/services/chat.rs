@@ -28,11 +28,7 @@ fn embed(m: &Message) -> Value {
 }
 
 pub async fn discord(t: Target, m: Message) -> Outcome {
-    let mut url = format!(
-        "https://discord.com/api/webhooks/{}/{}",
-        t.host,
-        t.first()?
-    );
+    let mut url = format!("https://discord.com/api/webhooks/{}/{}", t.host, t.first()?);
     if let Some(th) = t.q("thread") {
         url.push_str(&format!("?thread_id={th}"));
     }
@@ -67,7 +63,9 @@ pub async fn telegram(t: Target, m: Message) -> Outcome {
     let url = format!("https://api.telegram.org/bot{}/sendMessage", t.authority());
     for chat in chats {
         let (chat, topic) = match chat.rsplit_once(':') {
-            Some((c, th)) if th.bytes().all(|b| b.is_ascii_digit()) => (c.to_string(), Some(th.to_string())),
+            Some((c, th)) if th.bytes().all(|b| b.is_ascii_digit()) => {
+                (c.to_string(), Some(th.to_string()))
+            }
             _ => (chat, None),
         };
         let mut body = json!({
@@ -188,7 +186,10 @@ pub async fn rocket(t: Target, m: Message) -> Outcome {
             .await
             .map_err(|e| fail("rocket.chat", e))?;
         let login: Value = res.json().await.map_err(|e| fail("rocket.chat", e))?;
-        let token = need(login["data"]["authToken"].as_str(), "rocket.chat login token")?;
+        let token = need(
+            login["data"]["authToken"].as_str(),
+            "rocket.chat login token",
+        )?;
         let id = need(login["data"]["userId"].as_str(), "rocket.chat user id")?;
         let mut result = Ok(());
         for ch in targets {
@@ -221,7 +222,9 @@ pub async fn rocket(t: Target, m: Message) -> Outcome {
         (id, targets)
     } else {
         let pos = need(
-            targets.iter().position(|x| !x.starts_with('#') && !x.starts_with('@')),
+            targets
+                .iter()
+                .position(|x| !x.starts_with('#') && !x.starts_with('@')),
             "webhook token",
         )?;
         let mut rest = targets;
@@ -263,7 +266,10 @@ pub async fn matrix(t: Target, m: Message) -> Outcome {
                 return Err(format!("matrix login answered {}", res.status()));
             }
             let v: Value = res.json().await.map_err(|e| fail("matrix", e))?;
-            need(v["access_token"].as_str().map(String::from), "matrix access token")?
+            need(
+                v["access_token"].as_str().map(String::from),
+                "matrix access token",
+            )?
         }
         _ => need(
             t.q("token").map(String::from).or_else(|| t.user.clone()),
@@ -367,7 +373,9 @@ pub async fn workflows(t: Target, m: Message) -> Outcome {
         json!({ "type": "TextBlock", "text": m.body, "wrap": true }),
     ];
     if let Some(c) = &m.click {
-        body_blocks.push(json!({ "type": "TextBlock", "text": format!("[Open in senn]({c})"), "wrap": true }));
+        body_blocks.push(
+            json!({ "type": "TextBlock", "text": format!("[Open in senn]({c})"), "wrap": true }),
+        );
     }
     let body = json!({
         "type": "message",
@@ -449,7 +457,11 @@ pub async fn zulip(t: Target, m: Message) -> Outcome {
     }
     for target in targets {
         let form: Vec<(&str, String)> = if target.contains('@') {
-            vec![("type", "private".into()), ("to", target), ("content", m.full())]
+            vec![
+                ("type", "private".into()),
+                ("to", target),
+                ("content", m.full()),
+            ]
         } else {
             vec![
                 ("type", "stream".into()),
@@ -549,9 +561,11 @@ pub async fn mastodon(t: Target, m: Message) -> Outcome {
             }
         })
         .collect();
-    let visibility = t
-        .q("visibility")
-        .unwrap_or(if mentions.is_empty() { "public" } else { "direct" });
+    let visibility = t.q("visibility").unwrap_or(if mentions.is_empty() {
+        "public"
+    } else {
+        "direct"
+    });
     let prefix = if mentions.is_empty() {
         String::new()
     } else {
@@ -594,7 +608,8 @@ pub async fn line(t: Target, m: Message) -> Outcome {
         return Err("line URL is missing a user, group or room id".into());
     }
     for to in targets {
-        let body = json!({ "to": to, "messages": [{ "type": "text", "text": cut(&m.full(), 5000) }] });
+        let body =
+            json!({ "to": to, "messages": [{ "type": "text", "text": cut(&m.full(), 5000) }] });
         check(
             client()
                 .post("https://api.line.me/v2/bot/message/push")
