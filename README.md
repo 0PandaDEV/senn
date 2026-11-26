@@ -1,6 +1,16 @@
-# senn
+<div align="center">
+
+<img width="128px" src="https://github.com/user-attachments/assets/c3320aa3-4783-4aaa-a965-0124439c630f" />
+<h1><b>Senn</b></h1>
 
 Self-hosted Docker panel. One panel, many hosts, plain compose folders.
+
+</div>
+<br>
+
+<img width="3840" height="2160" alt="senn" src="https://github.com/user-attachments/assets/b81bfe92-1279-4a54-8682-48c7307c4f26" />
+
+<br>
 
 The panel never touches Docker. Every host runs `senn-agent` (a systemd service) that connects out to the panel over WebSocket, so hosts need no open port and the panel is the only thing exposed (behind https).
 
