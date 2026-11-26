@@ -2,7 +2,7 @@ export type Unit = "percent" | "bytes" | "rate" | "bits" | "count" | "number" | 
 export type Point = [number, number, number, number];
 export type Line = { id: string; label: string; color: string; points: Point[]; dashed?: boolean; hidden?: boolean };
 export type Span = { from: number; to: number; step: number };
-export type ChartOptions = { title: string; unit: Unit; yMax?: number };
+export type ChartOptions = { title: string; unit: Unit; log?: boolean };
 
 const FONT = '11px "Commit Mono", ui-monospace, monospace';
 const PAD = { top: 10, right: 12, bottom: 28 };
@@ -38,7 +38,7 @@ function scaled(v: number, base: number, units: string[]): string {
     i++;
   }
   const sign = v < 0 ? "-" : "";
-  return `${sign}${trim(value, value >= 100 || i === 0 ? 0 : value >= 10 ? 1 : 2)} ${units[i]}`;
+  return `${sign}${trim(value, value >= 100 || (i === 0 && !(units[0] === "/s" && value < 10)) ? 0 : value >= 10 ? 1 : 2)} ${units[i]}`;
 }
 
 function duration(v: number): string {
@@ -83,17 +83,87 @@ function niceStep(raw: number): number {
   return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 5 ? 5 : 10) * power;
 }
 
-function yTicks(max: number, unit: Unit): number[] {
-  const top = max > 0 ? max : 1;
+type Scale = { ticks: number[]; at: (v: number) => number; log: boolean };
+
+const MIN_SPAN: Record<Unit, number> = { percent: 5, celsius: 5, count: 4, number: 1, ops: 0.1, bytes: 1024, rate: 1024, bits: 1000, duration: 60 };
+const WHOLE: Unit[] = ["bytes", "rate", "bits", "count", "duration"];
+
+function tickStep(span: number, unit: Unit): number {
+  const raw = span / 4;
+  if (unit === "bytes" || unit === "rate") return Math.max(1, 2 ** Math.ceil(Math.log2(raw)));
   let scale = 1;
-  if (unit === "bytes" || unit === "rate") while (top / scale >= 1024) scale *= 1024;
-  else if (unit === "bits" || unit === "ops") while (top / scale >= 1000) scale *= 1000;
-  else if (unit === "duration") scale = [86400, 3600, 60, 1].find((u) => top / u >= 3) ?? 1;
-  let step = niceStep(top / scale / 4) * scale;
-  if (unit !== "number" && unit !== "percent" && unit !== "celsius") step = Math.max(1, Math.round(step));
+  if (unit === "bits" || unit === "ops") while (raw / scale >= 1000) scale *= 1000;
+  else if (unit === "duration") scale = [86400, 3600, 60, 1].find((u) => raw >= u) ?? 1;
+  const step = niceStep(raw / scale) * scale;
+  return WHOLE.includes(unit) ? Math.max(1, Math.round(step)) : step;
+}
+
+function linearScale(min: number, max: number, unit: Unit): Scale {
+  let lo = min;
+  let hi = max;
+  const least = Math.max(MIN_SPAN[unit], hi * 0.05);
+  if (hi - lo < least) {
+    const mid = (lo + hi) / 2;
+    lo = mid - least / 2;
+    hi = mid + least / 2;
+  }
+  const room = (hi - lo) * 0.08;
+  const ceiling = unit === "percent" && max <= 100 ? 100 : Infinity;
+  lo = min < max * 0.25 ? 0 : Math.max(0, lo - room);
+  hi = Math.min(ceiling, hi + room);
+  const step = tickStep(hi - lo, unit);
+  const first = Math.floor(lo / step);
+  const last = Math.max(first + 1, Math.ceil(hi / step - 1e-9));
   const ticks: number[] = [];
-  for (let v = 0; v < top + step * 0.999; v += step) ticks.push(v);
-  return ticks;
+  for (let i = first; i <= last; i++) ticks.push(i * step);
+  const bottom = first * step;
+  const size = last * step - bottom;
+  return { ticks, at: (v) => (v - bottom) / size, log: false };
+}
+
+function logScale(min: number, smallest: number, max: number): Scale {
+  const top = Math.max(2, Math.ceil(Math.log2(max * 1.02)));
+  const low = Math.min(top - 2, Math.max(Math.floor(Math.log2(smallest)), top - 20, 0));
+  const stride = Math.ceil((top - low) / 5);
+  const floor = 2 ** low;
+  const base = min < floor ? stride : 0;
+  const ticks: number[] = [];
+  for (let e = top; e >= low; e -= stride) ticks.unshift(2 ** e);
+  if (base) ticks.unshift(0);
+  else if (Math.log2(ticks[0]!) - low >= stride / 2) ticks.unshift(floor);
+  const size = top - low + base;
+  const at = (v: number) => {
+    if (v >= floor) return (Math.log2(v) - low + base) / size;
+    return base ? ((Math.max(v, 0) / floor) * base) / size : -1;
+  };
+  return { ticks, at, log: true };
+}
+
+function yScale(lines: Line[], from: number, to: number, unit: Unit, log: boolean): Scale {
+  const extent = (set: Line[]) => {
+    let min = Infinity;
+    let max = -Infinity;
+    let smallest = Infinity;
+    for (const line of set)
+      for (const p of line.points) {
+        if (p[0] < from || p[0] > to) continue;
+        if (p[2] < min) min = p[2];
+        if (p[3] > max) max = p[3];
+        for (const v of [p[1], p[2]]) if (v > 0 && v < smallest) smallest = v;
+      }
+    return { min, max, smallest };
+  };
+  const data = extent(lines.filter((l) => !l.dashed));
+  const refs = extent(lines.filter((l) => l.dashed));
+  let { min, max, smallest } = data;
+  if (!(max > 0) || refs.max <= max * 1.5) {
+    min = Math.min(min, refs.min);
+    max = Math.max(max, refs.max);
+    smallest = Math.min(smallest, refs.smallest);
+  }
+  if (log && smallest < Infinity && max >= Math.max(1, smallest) * 8) return logScale(Math.max(0, min), smallest, max);
+  if (max === -Infinity) return linearScale(0, 0, unit);
+  return linearScale(Math.max(0, min), Math.max(0, max), unit);
 }
 
 function xTicks(span: Span, width: number): { t: number; label: string }[] {
@@ -130,7 +200,7 @@ function nearest(points: Point[], t: number): Point | null {
 }
 
 type Card = { el: HTMLElement; swatch: HTMLElement; label: HTMLElement; last: HTMLElement; cells: Text[]; line: Line };
-type Geo = { x0: number; x1: number; y0: number; y1: number; top: number; from: number; to: number; muted: string; text: string };
+type Geo = { x0: number; x1: number; y0: number; y1: number; Y: (v: number) => number; from: number; to: number; muted: string; text: string };
 
 export class Chart {
   readonly el: HTMLElement;
@@ -142,6 +212,7 @@ export class Chart {
   private tip: HTMLElement;
   private noteEl: HTMLElement;
   private emptyEl: HTMLElement;
+  private scaleEl: HTMLElement;
   private legend: HTMLElement;
   private cards = new Map<string, Card>();
   private resort = true;
@@ -165,14 +236,14 @@ export class Chart {
   private left = GUTTER;
   private awayBound = false;
   readonly unit: Unit;
-  private yMax?: number;
+  private log: boolean;
   onCursor: (t: number | null) => void = () => {};
   onZoom: (from: number, to: number) => void = () => {};
   onZoomOut: () => void = () => {};
 
   constructor(parent: HTMLElement, options: ChartOptions) {
     this.unit = options.unit;
-    this.yMax = options.yMax;
+    this.log = options.log ?? false;
     this.el = document.createElement("section");
     this.el.className = "chart";
     const head = document.createElement("header");
@@ -181,9 +252,13 @@ export class Chart {
     this.emptyEl = document.createElement("span");
     this.emptyEl.className = "chart-empty muted";
     this.emptyEl.hidden = true;
+    this.scaleEl = document.createElement("span");
+    this.scaleEl.className = "chart-scale muted";
+    this.scaleEl.textContent = "log₂";
+    this.scaleEl.hidden = true;
     this.legend = document.createElement("div");
     this.legend.className = "chart-stats";
-    head.append(title, this.emptyEl);
+    head.append(title, this.emptyEl, this.scaleEl);
     this.plot = document.createElement("div");
     this.plot.className = "chart-plot";
     this.canvas = document.createElement("canvas");
@@ -229,6 +304,7 @@ export class Chart {
   empty(text: string | null) {
     this.el.classList.toggle("no-data", text !== null);
     this.emptyEl.hidden = text === null;
+    if (text !== null) this.scaleEl.hidden = true;
     this.emptyEl.textContent = text ?? "";
   }
 
@@ -459,20 +535,19 @@ export class Chart {
 
     const { from, to, step } = this.span;
     const visible = this.lines.filter((l) => !l.hidden);
-    let max = 0;
-    for (const line of visible) for (const p of line.points) if (p[0] >= from && p[0] <= to && p[3] > max) max = p[3];
-    const ticks = this.yMax ? yTicks(this.yMax, this.unit) : yTicks(max * 1.05, this.unit);
-    const top = ticks[ticks.length - 1] ?? 1;
+    const scale = yScale(visible, from, to, this.unit, this.log);
+    const ticks = scale.ticks;
+    this.scaleEl.hidden = !scale.log;
     const labels = ticks.map((v) => formatValue(v, this.unit));
     this.left = Math.ceil(Math.max(0, ...labels.map((l) => ctx.measureText(l).width))) + 10;
     const x0 = this.left;
     const x1 = w - PAD.right;
     const y0 = PAD.top;
     const y1 = h - PAD.bottom;
-    this.geo = { x0, x1, y0, y1, top, from, to, muted, text };
     const range = Math.max(1e-9, to - from);
     const X = (t: number) => x0 + ((t - from) / range) * (x1 - x0);
-    const Y = (v: number) => y1 - (Math.min(Math.max(v, 0), top) / top) * (y1 - y0);
+    const Y = (v: number) => y1 - scale.at(v) * (y1 - y0);
+    this.geo = { x0, x1, y0, y1, Y, from, to, muted, text };
 
     ctx.lineWidth = 1;
     ctx.strokeStyle = grid;
@@ -555,10 +630,9 @@ export class Chart {
     if (!w || !h || !geo) return;
     const ctx = this.octx;
     ctx.clearRect(0, 0, w, h);
-    const { x0, x1, y0, y1, top, from, to, muted, text } = geo;
+    const { x0, x1, y0, y1, Y, from, to, muted, text } = geo;
     const range = Math.max(1e-9, to - from);
     const X = (t: number) => x0 + ((t - from) / range) * (x1 - x0);
-    const Y = (v: number) => y1 - (Math.min(Math.max(v, 0), top) / top) * (y1 - y0);
 
     if (this.drag) {
       const a = Math.min(this.drag.x0, this.drag.x1);
@@ -592,9 +666,11 @@ export class Chart {
       if (p && Math.abs(p[0] - at) <= Math.max(this.span.step * 1.5, 3)) rows.push({ line, p });
     }
     for (const { line, p } of rows) {
+      const y = Y(p[1]);
+      if (y < y0 - 2 || y > y1 + 2) continue;
       ctx.fillStyle = line.color;
       ctx.beginPath();
-      ctx.arc(X(p[0]), Y(p[1]), 3, 0, Math.PI * 2);
+      ctx.arc(X(p[0]), y, 3, 0, Math.PI * 2);
       ctx.fill();
     }
     if (this.local) this.showTip(x, at, rows);

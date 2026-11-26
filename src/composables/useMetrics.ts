@@ -5,7 +5,7 @@ import { TimePicker, formatAbs, isNow, relativeFor, resolve } from "./useTimeRan
 import type { RangeExpr, Refresh } from "./useTimeRange.js";
 
 type Def = { id: string; metric: string; label: string; scale?: number; dashed?: boolean; by?: string };
-type ChartDef = { group: string; title: string; unit: Unit; yMax?: number; hint?: string; defs: Def[] };
+type ChartDef = { group: string; title: string; unit: Unit; log?: boolean; hint?: string; defs: Def[] };
 type Scope = { stack?: string; container?: string };
 type Sample = {
   agent: string;
@@ -24,14 +24,15 @@ const KEY = "senn:range";
 const d = (id: string, metric: string, label: string, extra: Partial<Def> = {}): Def => ({ id, metric, label, ...extra });
 const host = (name: string) => `senn_host_${name}`;
 const ctr = (name: string) => `senn_container_${name}`;
-const chart = (group: string, title: string, unit: Unit, defs: Def[], yMax?: number, hint?: string): ChartDef => ({ group, title, unit, yMax, hint, defs });
+const chart = (group: string, title: string, unit: Unit, defs: Def[], hint?: string): ChartDef => ({ group, title, unit, hint, defs });
+const log2 = (def: ChartDef): ChartDef => ({ ...def, log: true });
 const PSI = "Pressure stall info is off in this kernel. Boot with psi=1 to enable it.";
 const by = (label: string): Partial<Def> => ({ by: label });
 const bits = (extra: Partial<Def> = {}): Partial<Def> => ({ scale: 8, ...extra });
 
 const SETS: Record<string, ChartDef[]> = {
   host: [
-    chart("CPU", "CPU", "percent", [d("cpu", host("cpu_percent"), "CPU")], 100),
+    chart("CPU", "CPU", "percent", [d("cpu", host("cpu_percent"), "CPU")]),
     chart("CPU", "CPU breakdown", "percent", [
       d("user", host("cpu_user_percent"), "User"),
       d("system", host("cpu_system_percent"), "System"),
@@ -46,7 +47,7 @@ const SETS: Record<string, ChartDef[]> = {
       d("pmf", host("pressure_memory_full_percent"), "Memory (full)"),
       d("pi", host("pressure_io_percent"), "I/O"),
       d("pif", host("pressure_io_full_percent"), "I/O (full)"),
-    ], undefined, PSI),
+    ], PSI),
     chart("Memory", "Memory", "bytes", [
       d("used", host("mem_used_bytes"), "Used"),
       d("cached", host("mem_cached_bytes"), "Cached"),
@@ -58,28 +59,28 @@ const SETS: Record<string, ChartDef[]> = {
     chart("Memory", "Swap activity", "rate", [d("in", host("swap_in_bytes_per_second"), "Swap in"), d("out", host("swap_out_bytes_per_second"), "Swap out")]),
     chart("Disk", "Disk usage", "bytes", [d("used", host("disk_used_bytes"), "Used"), d("total", host("disk_total_bytes"), "Total", { dashed: true })]),
     chart("Disk", "Disk throughput", "rate", [d("read", host("io_read_bytes_per_second"), "Read"), d("write", host("io_write_bytes_per_second"), "Write")]),
-    chart("Disk", "Disk operations", "ops", [d("read", host("io_read_ops_per_second"), "Reads"), d("write", host("io_write_ops_per_second"), "Writes")]),
-    chart("Disk", "Disk busy", "percent", [d("busy", host("io_busy_percent"), "Busiest disk")], 100),
+    log2(chart("Disk", "Disk operations", "ops", [d("read", host("io_read_ops_per_second"), "Reads"), d("write", host("io_write_ops_per_second"), "Writes")])),
+    chart("Disk", "Disk busy", "percent", [d("busy", host("io_busy_percent"), "Busiest disk")]),
     chart("Network", "Network traffic", "bits", [d("rx", host("net_rx_bytes_per_second"), "In", bits()), d("tx", host("net_tx_bytes_per_second"), "Out", bits())]),
-    chart("Network", "Network packets", "ops", [d("rx", host("net_rx_packets_per_second"), "In"), d("tx", host("net_tx_packets_per_second"), "Out")]),
-    chart("Network", "Network errors and drops", "ops", [d("rx", host("net_rx_errors_per_second"), "In"), d("tx", host("net_tx_errors_per_second"), "Out")]),
-    chart("System", "Processes", "number", [
+    log2(chart("Network", "Network packets", "ops", [d("rx", host("net_rx_packets_per_second"), "In"), d("tx", host("net_tx_packets_per_second"), "Out")])),
+    log2(chart("Network", "Network errors and drops", "ops", [d("rx", host("net_rx_errors_per_second"), "In"), d("tx", host("net_tx_errors_per_second"), "Out")])),
+    log2(chart("System", "Processes", "number", [
       d("total", host("processes_total"), "Total"),
       d("running", host("processes_running"), "Running"),
       d("blocked", host("processes_blocked"), "Blocked"),
-    ]),
+    ])),
     chart("System", "TCP connections", "number", [d("tcp", host("tcp_connections"), "In use")]),
     chart("System", "Open files", "number", [d("files", host("open_files"), "File handles")]),
-    chart("System", "Context switches and interrupts", "ops", [d("ctx", host("context_switches_per_second"), "Context switches"), d("irq", host("interrupts_per_second"), "Interrupts")]),
-    chart("System", "Temperature", "celsius", [d("temp", host("temperature_celsius"), "Hottest sensor")], undefined, "This host exposes no temperature sensor."),
+    log2(chart("System", "Context switches and interrupts", "ops", [d("ctx", host("context_switches_per_second"), "Context switches"), d("irq", host("interrupts_per_second"), "Interrupts")])),
+    chart("System", "Temperature", "celsius", [d("temp", host("temperature_celsius"), "Hottest sensor")], "This host exposes no temperature sensor."),
     chart("System", "Uptime", "duration", [d("up", host("uptime_seconds"), "Uptime")]),
     chart("Docker", "Containers", "count", [d("running", ctr("running"), "Running", by("sum")), d("stopped", ctr("running"), "Not running", by("stopped"))]),
     chart("Docker", "Restarting containers", "count", [d("restarting", ctr("restarting"), "Restarting", by("sum"))]),
-    chart("Docker", "Docker objects", "count", [
+    log2(chart("Docker", "Docker objects", "count", [
       d("images", host("docker_images"), "Images"),
       d("volumes", host("docker_volumes"), "Volumes"),
       d("networks", host("docker_networks"), "Networks"),
-    ]),
+    ])),
     chart("Docker", "Image storage", "bytes", [d("size", host("docker_images_bytes"), "Images")]),
     chart("Per container", "Container CPU", "percent", [d("cpu", ctr("cpu_percent"), "CPU", by("container"))]),
     chart("Per container", "Container memory", "bytes", [d("mem", ctr("mem_bytes"), "Memory", by("container"))]),
@@ -88,31 +89,31 @@ const SETS: Record<string, ChartDef[]> = {
     chart("Per container", "Container network out", "bits", [d("tx", ctr("net_tx_bytes_per_second"), "Out", bits(by("container")))]),
     chart("Per container", "Container disk read", "rate", [d("read", ctr("io_read_bytes_per_second"), "Read", by("container"))]),
     chart("Per container", "Container disk write", "rate", [d("write", ctr("io_write_bytes_per_second"), "Write", by("container"))]),
-    chart("Per container", "Container processes", "number", [d("pids", ctr("pids"), "Processes", by("container"))]),
+    log2(chart("Per container", "Container processes", "number", [d("pids", ctr("pids"), "Processes", by("container"))])),
   ],
   stack: [
     chart("Resources", "CPU", "percent", [d("cpu", ctr("cpu_percent"), "CPU", by("service"))]),
-    chart("Resources", "CPU throttling", "ops", [d("thr", ctr("cpu_throttled_per_second"), "Throttled periods", by("service"))]),
+    log2(chart("Resources", "CPU throttling", "ops", [d("thr", ctr("cpu_throttled_per_second"), "Throttled periods", by("service"))])),
     chart("Resources", "Memory", "bytes", [d("mem", ctr("mem_bytes"), "Memory", by("service"))]),
-    chart("Resources", "Processes", "number", [d("pids", ctr("pids"), "Processes", by("service"))]),
+    log2(chart("Resources", "Processes", "number", [d("pids", ctr("pids"), "Processes", by("service"))])),
     chart("Network", "Network traffic", "bits", [d("rx", ctr("net_rx_bytes_per_second"), "In", bits(by("sum"))), d("tx", ctr("net_tx_bytes_per_second"), "Out", bits(by("sum")))]),
-    chart("Network", "Network packets", "ops", [d("rx", ctr("net_rx_packets_per_second"), "In", by("sum")), d("tx", ctr("net_tx_packets_per_second"), "Out", by("sum"))]),
+    log2(chart("Network", "Network packets", "ops", [d("rx", ctr("net_rx_packets_per_second"), "In", by("sum")), d("tx", ctr("net_tx_packets_per_second"), "Out", by("sum"))])),
     chart("Disk", "Disk throughput", "rate", [d("read", ctr("io_read_bytes_per_second"), "Read", by("sum")), d("write", ctr("io_write_bytes_per_second"), "Write", by("sum"))]),
-    chart("Disk", "Disk operations", "ops", [d("read", ctr("io_read_ops_per_second"), "Reads", by("sum")), d("write", ctr("io_write_ops_per_second"), "Writes", by("sum"))]),
+    log2(chart("Disk", "Disk operations", "ops", [d("read", ctr("io_read_ops_per_second"), "Reads", by("sum")), d("write", ctr("io_write_ops_per_second"), "Writes", by("sum"))])),
     chart("State", "Containers", "count", [d("running", ctr("running"), "Running", by("sum")), d("stopped", ctr("running"), "Not running", by("stopped"))]),
     chart("State", "Health checks", "count", [d("ok", ctr("healthy"), "Healthy", by("sum")), d("bad", ctr("healthy"), "Unhealthy", by("stopped"))]),
     chart("State", "Restarting containers", "count", [d("restarting", ctr("restarting"), "Restarting", by("sum"))]),
   ],
   container: [
     chart("Resources", "CPU", "percent", [d("cpu", ctr("cpu_percent"), "CPU")]),
-    chart("Resources", "CPU throttling", "ops", [d("thr", ctr("cpu_throttled_per_second"), "Throttled periods")]),
+    log2(chart("Resources", "CPU throttling", "ops", [d("thr", ctr("cpu_throttled_per_second"), "Throttled periods")])),
     chart("Resources", "Memory", "bytes", [d("mem", ctr("mem_bytes"), "Memory"), d("limit", ctr("mem_limit_bytes"), "Limit", { dashed: true })]),
-    chart("Resources", "Memory of limit", "percent", [d("memp", ctr("mem_percent"), "Memory")], 100),
-    chart("Resources", "Processes", "number", [d("pids", ctr("pids"), "Processes")]),
+    chart("Resources", "Memory of limit", "percent", [d("memp", ctr("mem_percent"), "Memory")]),
+    log2(chart("Resources", "Processes", "number", [d("pids", ctr("pids"), "Processes")])),
     chart("Network", "Network traffic", "bits", [d("rx", ctr("net_rx_bytes_per_second"), "In", bits()), d("tx", ctr("net_tx_bytes_per_second"), "Out", bits())]),
-    chart("Network", "Network packets", "ops", [d("rx", ctr("net_rx_packets_per_second"), "In"), d("tx", ctr("net_tx_packets_per_second"), "Out")]),
+    log2(chart("Network", "Network packets", "ops", [d("rx", ctr("net_rx_packets_per_second"), "In"), d("tx", ctr("net_tx_packets_per_second"), "Out")])),
     chart("Disk", "Disk throughput", "rate", [d("read", ctr("io_read_bytes_per_second"), "Read"), d("write", ctr("io_write_bytes_per_second"), "Write")]),
-    chart("Disk", "Disk operations", "ops", [d("read", ctr("io_read_ops_per_second"), "Reads"), d("write", ctr("io_write_ops_per_second"), "Writes")]),
+    log2(chart("Disk", "Disk operations", "ops", [d("read", ctr("io_read_ops_per_second"), "Reads"), d("write", ctr("io_write_ops_per_second"), "Writes")])),
     chart("State", "State", "count", [
       d("running", ctr("running"), "Running"),
       d("restarting", ctr("restarting"), "Restarting"),
@@ -337,7 +338,7 @@ class Panel {
         heading.textContent = group;
         grid.append(heading);
       }
-      const chart = new Chart(grid, { title: def.title, unit: def.unit, yMax: def.yMax });
+      const chart = new Chart(grid, { title: def.title, unit: def.unit, log: def.log });
       const slot: Slot = { chart, def, lines: new Map(), order: [], visible: false, onScreen: false, dirty: true, loaded: false, blank: false };
       this.observer.observe(chart.el);
       this.screen.observe(chart.el);

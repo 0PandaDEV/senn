@@ -715,6 +715,10 @@
 }
 
 .metrics .chart {
+  .chart-scale {
+    font-size: 0.75rem;
+  }
+
   .chart-empty {
     font-size: 0.75rem;
   }
