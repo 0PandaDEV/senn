@@ -3,7 +3,7 @@
 <img width="128px" src="https://github.com/user-attachments/assets/c3320aa3-4783-4aaa-a965-0124439c630f" />
 <h1><b>Senn</b></h1>
 
-Self-hosted Docker panel. One panel, many hosts, plain compose folders.
+A selfhosted docker panel that leaves your compose folders alone.
 
 </div>
 <br>
