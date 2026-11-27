@@ -16,7 +16,7 @@ The panel never touches Docker. Every host runs `senn-agent` (a systemd service)
 
 ## Run the panel
 
-```yml
+```yaml
 services:
   senn:
     image: ghcr.io/0pandadev/senn:latest
